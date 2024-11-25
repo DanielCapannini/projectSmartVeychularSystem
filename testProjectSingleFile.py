@@ -2,11 +2,13 @@ import carla
 import cv2
 import numpy as np
 
+pitchvalue = -15
+
 camera_transforms = [
-    (carla.Transform(carla.Location(x=1.5, z=2.4)), (600, 300)),  # Front camera
-    (carla.Transform(carla.Location(x=-0.5, y=-0.9, z=2.4), carla.Rotation(yaw=-135)), (200, 400)),  # Left side camera
-    (carla.Transform(carla.Location(x=-0.5, y=0.9, z=2.4), carla.Rotation(yaw=135)), (200, 400)),  # Right side camera
-    (carla.Transform(carla.Location(x=-1.5, z=2.4), carla.Rotation(yaw=180)), (600, 300))  # Rear camera
+    (carla.Transform(carla.Location(x=1.5, z=2.4), carla.Rotation(pitch=pitchvalue)), (600, 300)),  # Front camera (incline down)
+    (carla.Transform(carla.Location(x=-0.5, y=-0.9, z=2.4), carla.Rotation(yaw=-135, pitch=pitchvalue)), (600, 300)),  # Left side camera
+    (carla.Transform(carla.Location(x=-0.5, y=0.9, z=2.4), carla.Rotation(yaw=135, pitch=pitchvalue)), (600, 300)),  # Right side camera
+    (carla.Transform(carla.Location(x=-1.5, z=2.4), carla.Rotation(yaw=180, pitch=pitchvalue)), (600, 300))  # Rear camera
 ]
 
 client = carla.Client('localhost', 2000)
