@@ -13,41 +13,30 @@ camera_transforms = [
 
 client = carla.Client('localhost', 2000)
 client.set_timeout(20.0)
-world = client.load_world('Town05')
 world = client.get_world()
 spectator = world.get_spectator()
 
-# Funzione per il rilevamento delle linee bianche
 def detect_white_lines(image):
     img_array = np.copy(image)
-    img_bgr = img_array[:, :, :3]  # Ignora il canale alpha
+    img_bgr = img_array[:, :, :3]  # Prendi solo le prime 3 dimensioni (RGB)
 
-    gray_image = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    _, thresholded = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+    mask_white = cv2.inRange(hsv, (0, 0, 200), (180, 30, 255))
+    masked = cv2.bitwise_and(img_bgr, img_bgr, mask=mask_white)
 
-    # Trova i pixel bianchi nell'immagine thresholded
-    white_pixels = np.where(thresholded == 255)
+    gray = cv2.cvtColor(masked, cv2.COLOR_BGR2GRAY)
 
-    # Calcola la soglia personalizzata per estrarre il 95% dei pixel più chiari
-    sorted_pixels = np.sort(gray_image[white_pixels])
-    threshold_value = sorted_pixels[int(0.90 * len(sorted_pixels))]
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(blurred, 50, 150)
 
-    # Applica una sogliatura personalizzata per estrarre il 95% dei pixel più chiari
-    _, custom_thresholded = cv2.threshold(gray_image, threshold_value, 255, cv2.THRESH_BINARY)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=20, maxLineGap=10)
 
-    # Crea una maschera per estrarre solo i pixel più chiari del 95% dell'immagine
-    mask = np.zeros_like(gray_image)
-    mask[custom_thresholded == 255] = gray_image[custom_thresholded == 255]
-    edges = cv2.Canny(mask, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=50, maxLineGap=5)
-
-    # Disegna le linee rilevate sull'immagine originale
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]
-            cv2.line(img_bgr, (x1, y1), (x2, y2), (0, 255, 255), 2)  # Giallo (BGR: 0, 255, 255)
+            cv2.line(img_bgr, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Rosso (0, 255, 255)
 
-    return mask
+    return img_bgr
 
 def create_camera_callback(index):
     def camera_callback(image):
@@ -59,10 +48,11 @@ def create_camera_callback(index):
             video_outputs[index] = np.reshape(np.copy(image.raw_data), (image.height, image.width, 4))
     return camera_callback
 
-def spawn_vehicle(vehicle_index=0, spawn_index=0, pattern='vehicle.*'):
+def spawn_vehicle(vehicle_index=0, spawn_index=1, pattern='vehicle.*'):
     blueprint_library = world.get_blueprint_library()
     vehicle_bp = blueprint_library.filter(pattern)[vehicle_index]
-    spawn_point = world.get_map().get_spawn_points()[spawn_index]
+    spawn_point = carla.Transform(carla.Location(0, -8, 0))
+#    spawn_point = world.get_map().get_spawn_points()[spawn_index]
     vehicle = world.spawn_actor(vehicle_bp, spawn_point)
     return vehicle
 
@@ -74,7 +64,7 @@ def spawn_camera(attach_to=None, transform=carla.Transform(carla.Location(x=1.2,
     return camera
 
 vehicle = spawn_vehicle()
-vehicle.set_autopilot(True)
+vehicle.set_autopilot(False)
 
 cameras = []
 video_outputs = [np.zeros((600, 800, 4), dtype=np.uint8) for _ in range(4)]
