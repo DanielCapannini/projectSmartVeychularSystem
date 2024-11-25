@@ -10,8 +10,7 @@ camera_transforms = [
 ]
 
 client = carla.Client('localhost', 2000)
-client.set_timeout(20.0)
-world = client.load_world('Town05')
+client.set_timeout(30.0)
 world = client.get_world()
 spectator = world.get_spectator()
 
