@@ -21,3 +21,27 @@ if lines is not None:
 cv2.imshow("Detected Lines", image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+import cv2
+import numpy as np
+
+# Carica l'immagine
+image = cv2.imread("your_image.jpg")
+
+# Converti l'immagine in scala di grigi
+gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# Calcola una soglia per identificare i pixel più chiari
+_, thresholded = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+# Trova i pixel bianchi nell'immagine thresholded
+white_pixels = np.where(thresholded == 255)
+
+# Crea una maschera per estrarre solo i pixel più chiari del 90% per 100%
+mask = np.zeros_like(gray_image)
+mask[white_pixels] = gray_image[white_pixels]
+
+# Visualizza l'immagine con solo le parti più chiare del 90% per 100%
+cv2.imshow("Brightest Parts", mask)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
