@@ -75,3 +75,13 @@ mask[custom_thresholded == 255] = gray_image[custom_thresholded == 255]
 cv2.imshow("Brightest Parts (95%)", mask)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+
+# Definisci il kernel per le operazioni morfologiche
+kernel = np.ones((5, 5), np.uint8)  # Dimensione del kernel per l'operazione morfologica
+
+# Esegui l'operazione di apertura
+image_opened = cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
+
+# Esegui l'operazione di chiusura
+image_closed = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
