@@ -19,18 +19,16 @@ def detect_white_lines(image):
     img_array = np.copy(image)
     img_bgr = img_array[:, :, :3]  # Ignora il canale alpha
 
-    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
-    edges = cv2.Canny(binary, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=50, maxLineGap=5)
+    gray_image = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    _, thresholded = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    white_pixels = np.where(thresholded == 255)
+    sorted_pixels = np.sort(gray_image[white_pixels])
+    threshold_value = sorted_pixels[int(0.90 * len(sorted_pixels))]
+    _, custom_thresholded = cv2.threshold(gray_image, threshold_value, 255, cv2.THRESH_BINARY)
+    mask = np.zeros_like(gray_image)
+    mask[custom_thresholded == 255] = gray_image[custom_thresholded == 255]
 
-    # Disegna le linee rilevate sull'immagine originale
-    if lines is not None:
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            cv2.line(img_bgr, (x1, y1), (x2, y2), (0, 255, 255), 2)  # Giallo (BGR: 0, 255, 255)
-
-    return img_bgr
+    return mask
 
 def create_camera_callback(index):
     def camera_callback(image):
