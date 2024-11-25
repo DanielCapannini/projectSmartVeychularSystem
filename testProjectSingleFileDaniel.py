@@ -2,13 +2,11 @@ import carla
 import cv2
 import numpy as np
 
-pitchvalue = -15
-
 camera_transforms = [
-    (carla.Transform(carla.Location(x=1.5, z=2.4), carla.Rotation(pitch=pitchvalue)), (600, 300)),  # Front camera (incline down)
-    (carla.Transform(carla.Location(x=-0.5, y=-0.9, z=2.4), carla.Rotation(yaw=-135, pitch=pitchvalue)), (600, 300)),  # Left side camera
-    (carla.Transform(carla.Location(x=-0.5, y=0.9, z=2.4), carla.Rotation(yaw=135, pitch=pitchvalue)), (600, 300)),  # Right side camera
-    (carla.Transform(carla.Location(x=-1.5, z=2.4), carla.Rotation(yaw=180, pitch=pitchvalue)), (600, 300))  # Rear camera
+    (carla.Transform(carla.Location(x=1.5, z=2.4)), (600, 300)),  # Front camera
+    (carla.Transform(carla.Location(x=-0.5, y=-0.9, z=2.4), carla.Rotation(yaw=-135)), (200, 400)),  # Left side camera
+    (carla.Transform(carla.Location(x=-0.5, y=0.9, z=2.4), carla.Rotation(yaw=135)), (200, 400)),  # Right side camera
+    (carla.Transform(carla.Location(x=-1.5, z=2.4), carla.Rotation(yaw=180)), (600, 300))  # Rear camera
 ]
 
 client = carla.Client('localhost', 2000)
@@ -22,23 +20,9 @@ def detect_white_lines(image):
     img_array = np.copy(image)
     img_bgr = img_array[:, :, :3]  # Ignora il canale alpha
 
-    gray_image = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    _, thresholded = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    # Trova i pixel bianchi nell'immagine thresholded
-    white_pixels = np.where(thresholded == 255)
-
-    # Calcola la soglia personalizzata per estrarre il 95% dei pixel più chiari
-    sorted_pixels = np.sort(gray_image[white_pixels])
-    threshold_value = sorted_pixels[int(0.90 * len(sorted_pixels))]
-
-    # Applica una sogliatura personalizzata per estrarre il 95% dei pixel più chiari
-    _, custom_thresholded = cv2.threshold(gray_image, threshold_value, 255, cv2.THRESH_BINARY)
-
-    # Crea una maschera per estrarre solo i pixel più chiari del 95% dell'immagine
-    mask = np.zeros_like(gray_image)
-    mask[custom_thresholded == 255] = gray_image[custom_thresholded == 255]
-    edges = cv2.Canny(mask, 50, 150)
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+    edges = cv2.Canny(binary, 50, 150)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=50, maxLineGap=5)
 
     # Disegna le linee rilevate sull'immagine originale
@@ -47,7 +31,7 @@ def detect_white_lines(image):
             x1, y1, x2, y2 = line[0]
             cv2.line(img_bgr, (x1, y1), (x2, y2), (0, 255, 255), 2)  # Giallo (BGR: 0, 255, 255)
 
-    return mask
+    return img_bgr
 
 def create_camera_callback(index):
     def camera_callback(image):
