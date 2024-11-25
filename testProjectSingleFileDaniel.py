@@ -20,7 +20,8 @@ def detect_white_lines(image):
     img_bgr = img_array[:, :, :3]  # Ignora il canale alpha
 
     gray_image = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    _, thresholded = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    thresholded = cv2.adaptiveThreshold(gray_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                          cv2.THRESH_BINARY, 11, 2)
     white_pixels = np.where(thresholded == 255)
     sorted_pixels = np.sort(gray_image[white_pixels])
     threshold_value = sorted_pixels[int(0.90 * len(sorted_pixels))]
@@ -28,16 +29,12 @@ def detect_white_lines(image):
     mask = np.zeros_like(gray_image)
     mask[custom_thresholded == 255] = gray_image[custom_thresholded == 255]
 
-    return mask
+    return thresholded
 
 def create_camera_callback(index):
     def camera_callback(image):
-        global video_outputs
-        if index == 3:
-            np_image = np.reshape(np.copy(image.raw_data), (image.height, image.width, 4))
-            video_outputs[index] = detect_white_lines(np_image)
-        else:
-            video_outputs[index] = np.reshape(np.copy(image.raw_data), (image.height, image.width, 4))
+        np_image = np.reshape(np.copy(image.raw_data), (image.height, image.width, 4))
+        video_outputs[index] = detect_white_lines(np_image)
     return camera_callback
 
 def spawn_vehicle(vehicle_index=0, spawn_index=0, pattern='vehicle.*'):
