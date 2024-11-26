@@ -2,6 +2,8 @@ import carla
 import cv2
 import numpy as np
 
+from common import preprocess_image
+
 camera_transforms = [
     (carla.Transform(carla.Location(x=1.5, z=2.4)), (600, 300)),  # Front camera
     (carla.Transform(carla.Location(x=-0.5, y=-0.9, z=2.4), carla.Rotation(yaw=-135)), (200, 400)),  # Left side camera
@@ -18,18 +20,7 @@ spectator = world.get_spectator()
 def detect_white_lines(image):
     img_array = np.copy(image)
     img_bgr = img_array[:, :, :3]  # Ignora il canale alpha
-
-    gray_image = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    thresholded = cv2.adaptiveThreshold(gray_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                          cv2.THRESH_BINARY, 11, 2)
-    white_pixels = np.where(thresholded == 255)
-    sorted_pixels = np.sort(gray_image[white_pixels])
-    threshold_value = sorted_pixels[int(0.90 * len(sorted_pixels))]
-    _, custom_thresholded = cv2.threshold(gray_image, threshold_value, 255, cv2.THRESH_BINARY)
-    mask = np.zeros_like(gray_image)
-    mask[custom_thresholded == 255] = gray_image[custom_thresholded == 255]
-
-    return thresholded
+    return preprocess_image(img_bgr)
 
 def create_camera_callback(index):
     def camera_callback(image):
