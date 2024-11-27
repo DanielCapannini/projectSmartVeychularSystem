@@ -4,6 +4,14 @@ import numpy as np
 import carla
 import random
 
+from RL.Common import spawn_camera, preprocess_image, spawn_vehicle
+
+camera_transforms = [
+    (carla.Transform(carla.Location(x=1.5, z=2.4)), (600, 300)),  # Front camera
+    (carla.Transform(carla.Location(x=-0.5, y=-0.9, z=2.4), carla.Rotation(yaw=-135)), (200, 400)),  # Left side camera
+    (carla.Transform(carla.Location(x=-0.5, y=0.9, z=2.4), carla.Rotation(yaw=135)), (200, 400)),  # Right side camera
+]
+
 class CarlaEnv(gym.Env):
     def __init__(self):
         super(CarlaEnv, self).__init__()
@@ -13,12 +21,14 @@ class CarlaEnv(gym.Env):
         self.client.set_timeout(10.0)
         self.world = self.client.get_world()
 
+
         # Impostazione dello spazio degli stati e delle azioni
         self.observation_space = spaces.Box(low=0, high=255, shape=(640, 480, 3), dtype=np.uint8)  # Immagine RGB di 640x480
         self.action_space = spaces.Discrete(4)  # 4 azioni: accelerare, frenare, sterzare sinistra, sterzare destra
 
         # Creazione di un veicolo (simulazione)
         self.vehicle = None
+        self.image = None
 
     def reset(self):
         # Resetta l'ambiente e il veicolo
@@ -44,7 +54,7 @@ class CarlaEnv(gym.Env):
         state = self._get_observation()
 
         # Calcola la ricompensa (questa è una semplice ricompensa casuale)
-        reward = random.random()
+        reward = random.random()#da implementare
 
         # Termina l'episodio (se il veicolo esce dalla strada, per esempio)
         done = random.random() > 0.95  # Termina con probabilità 5%
@@ -63,24 +73,18 @@ class CarlaEnv(gym.Env):
             self.vehicle.destroy()
 
     def _spawn_vehicle(self):
-        # Spawna un veicolo in un punto casuale nel mondo
-        spawn_points = self.world.get_map().get_spawn_points()
-        spawn_point = random.choice(spawn_points)
-        vehicle = self.world.spawn_actor(carla.client.get_world().get_blueprint_library().find('vehicle.tesla.model3'), spawn_point)
-        return vehicle
+        return spawn_vehicle(self.world)
 
     def _attach_camera(self, vehicle):
-        # Attacca una telecamera al veicolo per ottenere l'immagine dello stato
-        camera_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
-        camera = self.world.spawn_actor(camera_bp, carla.Transform(carla.Location(x=1.5, z=2.4)), attach_to=vehicle)
-        camera.listen(lambda image: self._process_image(image))
-        return camera
+        camera_list = np.array([])
+        for i, transform in enumerate(camera_transforms):
+            camera = spawn_camera(self.world, attach_to=vehicle, transform=transform[0], width=transform[1][0], height=transform[1][1])
+            camera.listen(lambda image: self._process_image(image, i))
+            camera_list = np.append(camera_list, camera)
+        return camera_list
 
-    def _process_image(self, image):
-        # Converte l'immagine in un formato adatto all'osservazione Gym (ad esempio un array NumPy)
-        image.convert(carla.ColorConverter.Raw)
-        self.image = np.array(image.raw_data).reshape((image.height, image.width, 4))[:, :, :3]
+    def _process_image(self, image, index):
+        self.image[index] = np.array(preprocess_image(image))
 
     def _get_observation(self):
-        # Restituisce l'immagine (o altre informazioni) come stato
         return self.image
