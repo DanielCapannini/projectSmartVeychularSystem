@@ -1,5 +1,6 @@
-import time, math, random, cv2
 import numpy as np
+import cv2
+
 
 def preprocess_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
