@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import time
 import tkinter as tk
+import os
+print("Directory corrente:", os.getcwd())
 
 
 def processImage(imageURL):
@@ -25,5 +27,24 @@ def processImage(imageURL):
 imageURL = "./Federico/img/parcheggio.jpg"
 processImage(imageURL)
 
-import os
-print("Directory corrente:", os.getcwd())
+# Carica l'immagine
+image = cv2.imread(imageURL)
+
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# Soglia per isolare le linee bianche (valore soglia potrebbe necessitare aggiustamenti)
+_, thresholded = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+
+# Applicazione di Canny per il rilevamento dei contorni
+edges = cv2.Canny(thresholded, 100, 200)
+
+# Trova i contorni (limitati alle linee bianche)
+contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+# Disegna i contorni sull'immagine originale
+cv2.drawContours(image, contours, -1, (0, 255, 0), 2)
+
+# Visualizza l'immagine con i contorni delle linee bianche
+cv2.imshow('Linee Bianche Rilevate', image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
