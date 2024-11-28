@@ -16,14 +16,12 @@ class CarlaEnv(gym.Env):
     def __init__(self):
         super(CarlaEnv, self).__init__()
 
-        # Connessione al simulatore Carla
         self.client = carla.Client('localhost', 2000)
         self.client.set_timeout(10.0)
         self.world = self.client.get_world()
 
 
-        # Impostazione dello spazio degli stati e delle azioni
-        self.observation_space = spaces.Box(low=0, high=255, shape=(640, 480, 3), dtype=np.uint8)  # Immagine RGB di 640x480
+        self.observation_space = spaces.Box(low=0, high=255, shape=(640, 480, 3), dtype=np.uint8)
         self.action_space = spaces.Discrete(4)  # 4 azioni: accelerare, frenare, sterzare sinistra, sterzare destra
 
         # Creazione di un veicolo (simulazione)
@@ -88,3 +86,15 @@ class CarlaEnv(gym.Env):
 
     def _get_observation(self):
         return self.image
+
+    def collect_expert_data(env, esperto, num_episodi=10, file_path="expert_data.npz"):
+        data = {"observations": [], "actions": []}
+        for _ in range(num_episodi):
+            obs = env.reset()
+            done = False
+            while not done:
+                action = esperto(obs)  # L'azione definita dall'esperto
+                data["observations"].append(obs)
+                data["actions"].append(action)
+                obs, _, done, _ = env.step(action)
+        np.savez(file_path, **data)
