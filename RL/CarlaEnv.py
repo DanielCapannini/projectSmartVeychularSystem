@@ -18,6 +18,7 @@ class CarlaEnv(gym.Env):
 
         self.client = carla.Client('localhost', 2000)
         self.client.set_timeout(10.0)
+        self.client.load_world('Town5')
         self.world = self.client.get_world()
 
 
