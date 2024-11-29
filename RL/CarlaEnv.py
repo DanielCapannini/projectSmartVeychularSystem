@@ -4,12 +4,12 @@ import numpy as np
 import carla
 import random
 
-from RL.Common import spawn_camera, preprocess_image, spawn_vehicle
+from Common import spawn_camera, preprocess_image, spawn_vehicle
 
 camera_transforms = [
-    (carla.Transform(carla.Location(x=1.5, z=2.4)), (600, 300)),  # Front camera
-    (carla.Transform(carla.Location(x=-0.5, y=-0.9, z=2.4), carla.Rotation(yaw=-135)), (200, 400)),  # Left side camera
-    (carla.Transform(carla.Location(x=-0.5, y=0.9, z=2.4), carla.Rotation(yaw=135)), (200, 400)),  # Right side camera
+    (carla.Transform(carla.Location(x=1.5, z=2.4), carla.Rotation(pitch=-25)), (600, 300)),  # Front camera
+    (carla.Transform(carla.Location(x=-0.5, y=-0.9, z=2.4), carla.Rotation(yaw=-45, pitch=-25)), (600, 300)),  # Left side camera
+    (carla.Transform(carla.Location(x=-0.5, y=0.9, z=2.4), carla.Rotation(yaw=45, pitch=-25)), (600, 300)),  # Right side camera
 ]
 
 class CarlaEnv(gym.Env):
@@ -17,8 +17,8 @@ class CarlaEnv(gym.Env):
         super(CarlaEnv, self).__init__()
 
         self.client = carla.Client('localhost', 2000)
-        self.client.set_timeout(10.0)
-        self.client.load_world('Town5')
+        self.client.set_timeout(20.0)
+        self.client.load_world('Town05')
         self.world = self.client.get_world()
 
 
