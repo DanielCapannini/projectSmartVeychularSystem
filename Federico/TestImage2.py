@@ -63,7 +63,7 @@ def preprocess_image(imageURL):
 
     return image_opened
 
-def detect_lines(image, original_image):
+def detect_lines_and_draw_intersections(image, original_image):
     image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     edges = cv2.Canny(image, 50, 150)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=40, maxLineGap=10)
@@ -80,14 +80,80 @@ def detect_lines(image, original_image):
     # Unisci linee parallele vicine
     merged_lines = merge_parallel_lines(extended_lines)
 
-    # Disegna i rettangoli/romboidi uniti
+    # Trova i punti di intersezione
+    intersections = find_intersections(merged_lines)
+
+    # Disegna i rettangoli/romboidi
     for merged_line in merged_lines:
         cv2.polylines(image_rgb, [merged_line], isClosed=True, color=(0, 0, 255), thickness=2)
 
-
+    # Disegna i punti di intersezione
+    for (px, py) in intersections:
+        cv2.circle(image_rgb, (px, py), radius=5, color=(0, 255, 255), thickness=-1)  # Cerchio giallo
 
     # Mostra l'immagine finale
-    cv2.imshow("Detected Lines and Rectangles", image_rgb)
+    cv2.imshow("Detected Lines, Intersections, and Bisectors", image_rgb)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+def draw_bisectors(image, intersections, lines):
+    """
+    Disegna le bisettrici dei segmenti che si intersecano in ciascun punto di intersezione.
+    """
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+    def unit_vector(v):
+        """
+        Calcola il vettore unitario.
+        """
+        length = np.sqrt(v[0]**2 + v[1]**2)
+        if length == 0:
+            return (0, 0)
+        return (v[0] / length, v[1] / length)
+
+    for px, py in intersections:
+        # Trova i segmenti che si intersecano in (px, py)
+        intersecting_segments = []
+        for line in lines:
+            for seg in [
+                (line[0][0], line[0][1], line[1][0], line[1][1]),
+                (line[1][0], line[1][1], line[2][0], line[2][1]),
+                (line[2][0], line[2][1], line[3][0], line[3][1]),
+                (line[3][0], line[3][1], line[0][0], line[0][1]),
+            ]:
+                x1, y1, x2, y2 = seg
+                # Controlla se (px, py) è sul segmento
+                if min(x1, x2) <= px <= max(x1, x2) and min(y1, y2) <= py <= max(y1, y2):
+                    intersecting_segments.append(seg)
+
+        if len(intersecting_segments) < 2:
+            continue  # Serve almeno due segmenti per calcolare la bisettrice
+
+        # Calcola i vettori dei segmenti che si intersecano
+        vectors = []
+        for x1, y1, x2, y2 in intersecting_segments:
+            if (x1, y1) == (px, py):
+                vectors.append((x2 - x1, y2 - y1))
+            elif (x2, y2) == (px, py):
+                vectors.append((x1 - x2, y1 - y2))
+            else:
+                continue
+
+        if len(vectors) < 2:
+            continue  # Se non ci sono due vettori validi, salta
+
+        # Calcola la direzione della bisettrice
+        v1 = unit_vector(vectors[0])
+        v2 = unit_vector(vectors[1])
+        bisector = unit_vector((v1[0] + v2[0], v1[1] + v2[1]))
+
+        # Disegna la bisettrice
+        end_x = int(px + bisector[0] * 50)  # Estendi la bisettrice
+        end_y = int(py + bisector[1] * 50)
+        cv2.arrowedLine(image_rgb, (px, py), (end_x, end_y), color=(0, 255, 255), thickness=2, tipLength=0.3)
+
+    # Mostra l'immagine con le bisettrici
+    cv2.imshow("Bisectors", image_rgb)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     
@@ -134,21 +200,68 @@ def merge_parallel_lines(lines, angle_tolerance=5, distance_threshold=20):
 
     return merged_lines
 
-def draw_center_circle(image, approx):
-    # Calcola i momenti del contorno per trovare il centro del rettangolo
-    M = cv2.moments(approx)
-    if M["m00"] != 0:
-        cx = int(M["m10"] / M["m00"])
-        cy = int(M["m01"] / M["m00"])
+def find_intersections(lines):
+    """
+    Trova i punti di intersezione tra i lati di poligoni (rettangoli o romboidi).
+    """
+    intersections = []
 
-        # Disegna il cerchio giallo (BGR: [0, 255, 255]) al centro del rettangolo
-        cv2.circle(image, (cx, cy), 10, (0, 255, 255), -1)  # Cerchio giallo con raggio 10
+    def segment_intersection(seg1, seg2):
+        """
+        Calcola il punto di intersezione tra due segmenti (se esiste).
+        """
+        x1, y1, x2, y2 = seg1
+        x3, y3, x4, y4 = seg2
+
+        # Determinanti per verificare l'intersezione
+        det = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+        if det == 0:
+            return None  # Segmenti paralleli
+
+        # Coordinate dell'intersezione
+        px = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / det
+        py = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / det
+
+        # Verifica che il punto si trovi all'interno dei segmenti
+        if (
+            min(x1, x2) <= px <= max(x1, x2)
+            and min(y1, y2) <= py <= max(y1, y2)
+            and min(x3, x4) <= px <= max(x3, x4)
+            and min(y3, y4) <= py <= max(y3, y4)
+        ):
+            return (int(px), int(py))
+        return None
+
+    # Confronta i lati di tutti i poligoni
+    for i, poly1 in enumerate(lines):
+        edges1 = [
+            (poly1[0][0], poly1[0][1], poly1[1][0], poly1[1][1]),
+            (poly1[1][0], poly1[1][1], poly1[2][0], poly1[2][1]),
+            (poly1[2][0], poly1[2][1], poly1[3][0], poly1[3][1]),
+            (poly1[3][0], poly1[3][1], poly1[0][0], poly1[0][1]),
+        ]
+
+        for j, poly2 in enumerate(lines[i + 1:]):
+            edges2 = [
+                (poly2[0][0], poly2[0][1], poly2[1][0], poly2[1][1]),
+                (poly2[1][0], poly2[1][1], poly2[2][0], poly2[2][1]),
+                (poly2[2][0], poly2[2][1], poly2[3][0], poly2[3][1]),
+                (poly2[3][0], poly2[3][1], poly2[0][0], poly2[0][1]),
+            ]
+
+            for seg1 in edges1:
+                for seg2 in edges2:
+                    intersection = segment_intersection(seg1, seg2)
+                    if intersection:
+                        intersections.append(intersection)
+
+    return intersections
 
 
 # Funzione principale per elaborare l'immagine
 def process_image(imageURL):
     image_opened = preprocess_image(imageURL)  # Pre-processing dell'immagine
-    detect_lines(image_opened, imageURL)       # Rilevamento delle linee
+    detect_lines_and_draw_intersections(image_opened, imageURL)       # Rilevamento delle linee
 
 # Esegui la funzione per le immagini
 imageURL = "./Federico/img/parcheggio.jpg"
