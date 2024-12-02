@@ -3,6 +3,7 @@ from gym import spaces
 import numpy as np
 import carla
 import random
+import cv2
 
 from Common import spawn_camera, preprocess_image, spawn_vehicle
 
@@ -26,9 +27,9 @@ class CarlaEnv(gym.Env):
 
         self.vehicle = None
         self.camera = []
-        self.image1 = np.zeros((300, 600))
-        self.image2 = np.zeros((300, 600))
-        self.image0 = np.zeros((300, 600))
+        self.image1 = np.zeros((50, 100))
+        self.image2 = np.zeros((50, 100))
+        self.image0 = np.zeros((50, 100))
         self.counter = 0
 
     def reset(self):
@@ -84,12 +85,16 @@ class CarlaEnv(gym.Env):
     def _process_image(self, image, index):
         image_output_left = np.reshape(np.copy(image.raw_data), (image.height, image.width, 4))
         processed_image = np.array(preprocess_image(image_output_left))
+        resized_image = cv2.resize(processed_image, (100, 50))
+        print(np.shape(self.image0))
+        print(np.shape(self.image1))
+        print(np.shape(self.image2))
         if index==0:
-            self.image0 = processed_image
+            self.image0 = resized_image
         if index==1:
-            self.image1 = processed_image
+            self.image1 = resized_image
         if index==2:
-            self.image2 = processed_image
+            self.image2 = resized_image
 
     def _get_observation(self):
         return np.stack((self.image0, self.image1, self.image2), axis=0)
@@ -97,9 +102,9 @@ class CarlaEnv(gym.Env):
     @staticmethod
     def collect_expert_data(env, expert, num_episodes=10, file_path="./expert_data.npz"):
         data = {"observations": [], "actions": []}
-        print("start epoch")
+        #print("start epoch")
         for i in range(num_episodes):
-            print("start "+ str(i)+ " epoch")
+            #print("start "+ str(i)+ " epoch")
             obs = env.reset()
             done = False
             while not done:
@@ -107,5 +112,5 @@ class CarlaEnv(gym.Env):
                 data["observations"].append(obs)
                 data["actions"].append((throttle, steer, brake))
                 obs, _, done, _ = env.step(throttle, steer, brake)
-            print("end "+ str(i)+ " epoch")
+            #print("end "+ str(i)+ " epoch")
         np.savez(file_path, **data)
