@@ -13,6 +13,12 @@ def unit_vector(v):
         return (0, 0)
     return (v[0] / length, v[1] / length)
 
+def is_point_within_image(x, y, image_width, image_height):
+    """
+    Verifica se il punto (x, y) è all'interno dei limiti dell'immagine.
+    """
+    return 0 <= x < image_width and 0 <= y < image_height
+
 def extend_line(line, angle, length, direction="both"):
     x1, y1, x2, y2 = line
 
@@ -76,6 +82,7 @@ def preprocess_image(imageURL):
 
 def detect_lines_and_draw_intersections(image, original_image):
     image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    height, width = image.shape[:2]
     edges = cv2.Canny(image, 50, 150)
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=40, maxLineGap=10)
 
@@ -92,7 +99,7 @@ def detect_lines_and_draw_intersections(image, original_image):
     merged_lines = merge_parallel_lines(extended_lines)
 
     # Trova i punti di intersezione
-    intersections = find_intersections(merged_lines)
+    intersections = find_intersections(merged_lines, width, height)
 
     # Disegna i rettangoli/romboidi
     for merged_line in merged_lines:
@@ -109,17 +116,20 @@ def detect_lines_and_draw_intersections(image, original_image):
         # Disegna la bisettrice
         cv2.line(image_rgb, (px, py), (bisector_end_x, bisector_end_y), (0, 255, 0), 2)  # Bisettrice verde
         # Stampa l'angolo
-        print(f"Angolo tra i segmenti: {angle:.2f}°")
+        #print(f"Angolo tra i segmenti: {angle:.2f}°")
 
-    bisectors_intersections = find_bisectors_intersections(bisectors)
+    bisectors_intersections = find_bisectors_intersections(bisectors, width, height)
+
+    remove_nearby_points(intersections, bisectors_intersections)
 
     for (x, y) in bisectors_intersections:
         # Verifica se il punto è all'interno dei limiti dell'immagine
         if 0 <= x < image_rgb.shape[1] and 0 <= y < image_rgb.shape[0]:
             # Disegna il cerchio in corrispondenza del punto di intersezione
             cv2.circle(image_rgb, (x, y), radius=5, color=(255, 0, 0), thickness=-1)
-        else:
-            print(f"Warning: Punto fuori dai limiti: ({x}, {y})")
+        #else:
+            #print(f"Warning: Punto fuori dai limiti: ({x}, {y})")
+
 
 
     # Mostra l'immagine finale
@@ -170,7 +180,7 @@ def merge_parallel_lines(lines, angle_tolerance=5, distance_threshold=20):
 
     return merged_lines
 
-def find_intersections(lines):
+def find_intersections(lines, image_width, image_height):
     """
     Trova i punti di intersezione tra i lati di poligoni (rettangoli o romboidi).
     Calcola anche l'angolo tra i segmenti che si intersecano e disegna la bisettrice.
@@ -247,24 +257,54 @@ def find_intersections(lines):
                     seg2 = [lines[j][l], lines[j][l + 1]]
                     intersection, bisector_end, angle = segment_intersection(seg1, seg2)
                     if intersection:
-                        intersections.append((intersection, bisector_end, angle))
-
+                        # Controlla se il punto di intersezione è dentro l'immagine
+                        px, py = intersection
+                        if is_point_within_image(px, py, image_width, image_height):
+                            intersections.append((intersection, bisector_end, angle))
+                        else:
+                            print(f"Punto fuori dai limiti dell'immagine: {intersection}")
+    
     return intersections
 
-def find_bisectors_intersections(bisectors):
+def find_bisectors_intersections(bisectors, image_width, image_height, max_distance=0.5):
     intersections = []
+    
     for i in range(len(bisectors)):
-        for j in range(i+1, len(bisectors)):
+        for j in range(i + 1, len(bisectors)):
             # Prendi due bisettrici (ogni bisettrice è una coppia di punti)
             (x1, y1), (x2, y2) = bisectors[i]
             (x3, y3), (x4, y4) = bisectors[j]
             
             # Calcola il punto di intersezione tra le due linee (bisettrici)
             intersection_point = line_intersection((x1, y1), (x2, y2), (x3, y3), (x4, y4))
+            
             if intersection_point:
-                intersections.append(intersection_point)
+                # Verifica se l'intersezione è entro la distanza massima dalle due linee
+                (ix, iy) = intersection_point
+                dist1 = distance_point_to_line(ix, iy, x1, y1, x2, y2)
+                dist2 = distance_point_to_line(ix, iy, x3, y3, x4, y4)
+                
+                # Aggiungi l'intersezione solo se è entro la distanza massima dalle linee
+                if dist1 <= max_distance and dist2 <= max_distance:
+                    # Controlla se il punto di intersezione è dentro l'immagine
+                    if is_point_within_image(ix, iy, image_width, image_height):
+                        intersections.append(intersection_point)
+                    else:
+                        print(f"Punto di intersezione fuori dai limiti dell'immagine: {intersection_point}")
     
     return intersections
+
+def distance_point_to_line(px, py, x1, y1, x2, y2):
+    """
+    Calcola la distanza tra un punto (px, py) e la linea definita dai punti (x1, y1) e (x2, y2).
+    """
+    num = abs((y2 - y1) * px - (x2 - x1) * py + x2 * y1 - y2 * x1)
+    denom = math.sqrt((y2 - y1)**2 + (x2 - x1)**2)
+    
+    distance = num / denom
+    print(f"Distanza tra ({px}, {py}) e la linea: {distance}")  # Debug
+    
+    return distance
 
 def line_intersection(p1, p2, p3, p4):
     """
@@ -286,31 +326,58 @@ def line_intersection(p1, p2, p3, p4):
 
     return (int(x), int(y))
 
-def draw_bisectors_from_intersections(image, bisectors_intersections):
-    print(bisectors_intersections)
-    print(image.shape)
+def points_distance(p1, p2):
     """
-    Disegna le intersezioni e le bisettrici sull'immagine.
-    :param image: Immagine su cui disegnare.
-    :param bisectors: Array di intersezioni e bisettrici, dove ogni elemento è del tipo
-                       ((px, py), (bisector_end_x, bisector_end_y)).
+    Calcola la distanza euclidea tra due punti p1 e p2.
     """
-    if len(image.shape) == 2:  # Se l'immagine è in scala di grigi
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-    else:
-        image_rgb = image.copy()
+    x1, y1 = p1
+    x2, y2 = p2
+    distance = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     
-    # Cicla su tutti i punti e disegnali
-    # Cicla su tutti i punti e disegnali
-    for (x, y) in bisectors_intersections:
-        # Verifica se il punto è all'interno dei limiti dell'immagine
-        if 0 <= x < image_rgb.shape[1] and 0 <= y < image_rgb.shape[0]:
-            # Disegna il cerchio in corrispondenza del punto di intersezione
-            cv2.circle(image_rgb, (x, y), radius=5000, color=(255, 0, 255), thickness=-1)
-        else:
-            print(f"Warning: Punto fuori dai limiti: ({x}, {y})")
+    # Stampa la distanza trovata per il debug
+    #print(f"Distanza tra {p1} e {p2}: {distance}")
+    
+    return distance
 
-
+def remove_nearby_points(array1, array2, range_distance = 40):
+    """
+    Controlla se i punti nel primo array (array1) sono vicini ai punti nel secondo array (array2),
+    e rimuove i punti vicini da array2.
+    
+    :param array1: Primo array di punti e bisettrici, dove ogni elemento è del tipo
+                   ((px, py), (bisector_end_x, bisector_end_y), angle_deg).
+    :param array2: Secondo array di punti (array di tuple (x, y)).
+    :param range_distance: Range di distanza entro il quale i punti sono considerati "vicini".
+    
+    :return: array2 modificato.
+    """
+    to_remove = []  # Lista di indici da rimuovere in array2
+    
+    # Scorri ogni elemento di array1
+    for element1 in array1:
+        (px, py), (bisector_end_x, bisector_end_y), _ = element1  # Estrai i punti (px, py) e (bisector_end_x, bisector_end_y)
+        
+        # Calcola la distanza tra (px, py) e (bisector_end_x, bisector_end_y)
+        for i, point2 in enumerate(array2):
+            (x2, y2) = point2
+            
+            # Verifica se il punto del secondo array è vicino a uno dei punti del primo array
+            distance = points_distance((px, py), (x2, y2))
+            
+            # Se almeno uno dei punti del primo array è vicino al punto del secondo array, lo rimuoviamo
+            if distance <= range_distance:
+                del array2[i]
+    
+    """
+    # Rimuovi i punti da array2, senza alterare l'indice durante l'iterazione
+    for index in sorted(to_remove, reverse=True):
+        try:
+            del array2[index]
+        except IndexError:
+            print()
+            #print(f"Errore: Tentativo di rimuovere l'indice {index} che non esiste.")
+    """
+    return array2
 
 # Funzione principale per elaborare l'immagine
 def process_image(imageURL):
@@ -324,4 +391,4 @@ imageURL2 = "./Federico/img/parcheggio3.jpg"
 
 process_image(imageURL)
 process_image(imageURL2)
-process_image(imageURLAlto)
+#process_image(imageURLAlto)
