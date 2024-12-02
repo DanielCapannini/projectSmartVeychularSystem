@@ -98,14 +98,29 @@ def detect_lines_and_draw_intersections(image, original_image):
     for merged_line in merged_lines:
         cv2.polylines(image_rgb, [np.array(merged_line, dtype=np.int32)], isClosed=True, color=(0, 0, 255), thickness=2)
 
+    bisectors = [] 
+    #bisectors_intersection = []
+
     # Disegna i punti di intersezione
     for (px, py), (bisector_end_x, bisector_end_y), angle in intersections:
+        bisectors.append(((px, py), (bisector_end_x, bisector_end_y)))
         # Disegna il punto di intersezione
         cv2.circle(image_rgb, (px, py), radius=5, color=(0, 255, 255), thickness=-1)  # Cerchio giallo
         # Disegna la bisettrice
         cv2.line(image_rgb, (px, py), (bisector_end_x, bisector_end_y), (0, 255, 0), 2)  # Bisettrice verde
         # Stampa l'angolo
         print(f"Angolo tra i segmenti: {angle:.2f}°")
+
+    bisectors_intersections = find_bisectors_intersections(bisectors)
+
+    for (x, y) in bisectors_intersections:
+        # Verifica se il punto è all'interno dei limiti dell'immagine
+        if 0 <= x < image_rgb.shape[1] and 0 <= y < image_rgb.shape[0]:
+            # Disegna il cerchio in corrispondenza del punto di intersezione
+            cv2.circle(image_rgb, (x, y), radius=5, color=(255, 0, 0), thickness=-1)
+        else:
+            print(f"Warning: Punto fuori dai limiti: ({x}, {y})")
+
 
     # Mostra l'immagine finale
     cv2.imshow("Detected Lines, Intersections, and Angles", image_rgb)
@@ -236,57 +251,65 @@ def find_intersections(lines):
 
     return intersections
 
-def draw_bisectors(image, intersections, lines):
+def find_bisectors_intersections(bisectors):
+    intersections = []
+    for i in range(len(bisectors)):
+        for j in range(i+1, len(bisectors)):
+            # Prendi due bisettrici (ogni bisettrice è una coppia di punti)
+            (x1, y1), (x2, y2) = bisectors[i]
+            (x3, y3), (x4, y4) = bisectors[j]
+            
+            # Calcola il punto di intersezione tra le due linee (bisettrici)
+            intersection_point = line_intersection((x1, y1), (x2, y2), (x3, y3), (x4, y4))
+            if intersection_point:
+                intersections.append(intersection_point)
+    
+    return intersections
+
+def line_intersection(p1, p2, p3, p4):
     """
-    Disegna le bisettrici dei segmenti che si intersecano in ciascun punto di intersezione.
+    Calcola il punto di intersezione di due linee definite dai punti p1-p2 e p3-p4.
     """
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    x1, y1 = p1
+    x2, y2 = p2
+    x3, y3 = p3
+    x4, y4 = p4
 
-    for px, py in intersections:
-        # Trova i segmenti che si intersecano in (px, py)
-        intersecting_segments = []
-        for line in lines:
-            for seg in [
-                (line[0][0], line[0][1], line[1][0], line[1][1]),
-                (line[1][0], line[1][1], line[2][0], line[2][1]),
-                (line[2][0], line[2][1], line[3][0], line[3][1]),
-                (line[3][0], line[3][1], line[0][0], line[0][1]),
-            ]:
-                x1, y1, x2, y2 = seg
-                # Controlla se (px, py) è sul segmento
-                if min(x1, x2) <= px <= max(x1, x2) and min(y1, y2) <= py <= max(y1, y2):
-                    intersecting_segments.append(seg)
+    denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+    
+    if denom == 0:
+        return None  # Le linee sono parallele, nessuna intersezione
+    
+    # Calcola le coordinate di intersezione
+    x = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denom
+    y = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
 
-        if len(intersecting_segments) < 2:
-            continue  # Serve almeno due segmenti per calcolare la bisettrice
+    return (int(x), int(y))
 
-        # Calcola i vettori dei segmenti che si intersecano
-        vectors = []
-        for x1, y1, x2, y2 in intersecting_segments:
-            if (x1, y1) == (px, py):
-                vectors.append((x2 - x1, y2 - y1))
-            elif (x2, y2) == (px, py):
-                vectors.append((x1 - x2, y1 - y2))
-            else:
-                continue
+def draw_bisectors_from_intersections(image, bisectors_intersections):
+    print(bisectors_intersections)
+    print(image.shape)
+    """
+    Disegna le intersezioni e le bisettrici sull'immagine.
+    :param image: Immagine su cui disegnare.
+    :param bisectors: Array di intersezioni e bisettrici, dove ogni elemento è del tipo
+                       ((px, py), (bisector_end_x, bisector_end_y)).
+    """
+    if len(image.shape) == 2:  # Se l'immagine è in scala di grigi
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    else:
+        image_rgb = image.copy()
+    
+    # Cicla su tutti i punti e disegnali
+    # Cicla su tutti i punti e disegnali
+    for (x, y) in bisectors_intersections:
+        # Verifica se il punto è all'interno dei limiti dell'immagine
+        if 0 <= x < image_rgb.shape[1] and 0 <= y < image_rgb.shape[0]:
+            # Disegna il cerchio in corrispondenza del punto di intersezione
+            cv2.circle(image_rgb, (x, y), radius=5000, color=(255, 0, 255), thickness=-1)
+        else:
+            print(f"Warning: Punto fuori dai limiti: ({x}, {y})")
 
-        if len(vectors) < 2:
-            continue  # Se non ci sono due vettori validi, salta
-
-        # Calcola la direzione della bisettrice
-        v1 = unit_vector(vectors[0])
-        v2 = unit_vector(vectors[1])
-        bisector = unit_vector((v1[0] + v2[0], v1[1] + v2[1]))
-
-        # Disegna la bisettrice
-        end_x = int(px + bisector[0] * 50)  # Estendi la bisettrice
-        end_y = int(py + bisector[1] * 50)
-        cv2.arrowedLine(image_rgb, (px, py), (end_x, end_y), color=(0, 255, 255), thickness=2, tipLength=0.3)
-
-    # Mostra l'immagine con le bisettrici
-    cv2.imshow("Detected Lines, Intersections, and Bisectors", image_rgb)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
 
 
 # Funzione principale per elaborare l'immagine
