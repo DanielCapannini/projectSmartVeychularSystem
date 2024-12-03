@@ -160,24 +160,48 @@ def line_intersection(p1, p2, p3, p4):
 
     return (int(x), int(y))
 
-
-def find_intersections_between_arrays(array1, array2):
+def is_point_in_array(point, points_array, tolerance=1):
     """
-    Trova le intersezioni tra le bisettrici in due array.
-    
+    Verifica se il punto (px, py) è presente nell'array dei punti esistenti.
+    La funzione ora considera i punti vicini se sono entro una certa tolleranza (default 1).
+
+    :param point: Il punto da verificare (px, py).
+    :param points_array: L'array dei punti esistenti, ogni elemento è una tupla ((px, py), ...).
+    :param tolerance: La tolleranza per considerare i punti "uguali".
+    :return: True se il punto è presente nell'array, altrimenti False.
+    """
+    for p in points_array:
+        # Estraiamo solo (px, py) da ogni elemento nell'array
+        px, py = p[0]  # p[0] è il (px, py) del punto
+        if np.isclose(px, point[0], atol=tolerance) and np.isclose(py, point[1], atol=tolerance):
+            print(f"Punto {point} vicino a {p[0]}, quindi considerato uguale.")  # Debug
+            return True
+    return False
+
+def find_intersections_between_arrays(array1, array2, points_array):
+    """
+    Trova le intersezioni tra le bisettrici in due array, aggiungendo solo quelle che non sono
+    già presenti nell'array di punti.
+
     :param array1: Primo array di bisettrici, ciascuna definita da (x1, y1, x2, y2).
     :param array2: Secondo array di bisettrici, ciascuna definita da (x1, y1, x2, y2).
-    :return: Lista di intersezioni come tuple (px, py).
+    :param points_array: Array di punti da escludere dalle intersezioni, ognuno definito da 
+                          ((px, py), (bisector_end_x, bisector_end_y), angle).
+    :return: Lista di intersezioni come tuple (px, py) che non sono nell'array points_array.
     """
     intersections = []
-    
+
     for line1 in array1:
         for line2 in array2:
             # Trova l'intersezione tra line1 e line2
             intersection = find_line_intersection(line1, line2)
             if intersection is not None:
-                intersections.append(intersection)
-    
+                # Se l'intersezione è una tupla di due valori (px, py), lo aggiungiamo
+                if isinstance(intersection, tuple) and len(intersection) == 2:
+                    # Verifica che l'intersezione non sia già nei punti esistenti
+                    if not is_point_in_array(intersection, points_array):
+                        intersections.append(intersection)
+
     return intersections
 
 def find_line_intersection(line1, line2):
@@ -285,14 +309,14 @@ def detect_lines(image):
             bisector_end_x_specular, bisector_end_y_specular = int(bisector_end_x_specular), int(bisector_end_y_specular)
             
             # Disegna il punto di intersezione
-            cv2.circle(image_rgb, (int(px), int(py)), radius=5, color=(0, 255, 255), thickness=-1) # Disegna la bisettrice
+            cv2.circle(image_rgb, (int(px), int(py)), radius=5, color=(0, 0, 255), thickness=-1) # Disegna l'intersezione in rosso
             cv2.line(image_rgb, (px, py), (bisector_end_x, bisector_end_y), (255, 255, 0), 2)  # Bisettrice blu
             cv2.line(image_rgb, (dx, dy), (bisector_end_x_specular, bisector_end_y_specular ), (255, 255, 255), 2) #bisettrice speculare bianca
             # Stampa l'angolo
             #print(f"Angolo tra i segmenti: {angle:.2f}°")
 
     #bisectors_intersections = find_bisectors_intersections(bisectors, 0, 0)
-    bisectors_intersections = find_intersections_between_arrays(bisectors, bisectors_specular)
+    bisectors_intersections = find_intersections_between_arrays(bisectors, bisectors_specular, intersections)
     print("Intersezioni trovate:", bisectors_intersections)
 
     for (x, y) in bisectors_intersections:
@@ -398,24 +422,26 @@ def get_all_intersections(lines: np.ndarray) -> np.ndarray:
                 # Calcola l'angolo tra i segmenti
                 angle = calculate_angle(lines[i], lines[j])
 
-                # Calcola la bisettrice
-                bisector = calculate_bisector(lines[i], lines[j])
-                bisector_lines = direction_to_line(bisector, intersection)
-                
-                # Definisci la lunghezza della bisettrice
-                bisector_length = 50
-                bisector_end_x = px + bisector[0] * bisector_length
-                bisector_end_y = py + bisector[1] * bisector_length
+                if angle > 10:  # Solo se l'angolo è maggiore di 10°
+                    print(f"Angolo tra i segmenti: {angle:.2f}°")
 
-                is_overlapping = False
-                for line in lines:
-                    if are_lines_overlapping(bisector_lines, line, 10):  # Se la bisettrice è sovrapposta
-                        is_overlapping = True
-                        break
+                    # Calcola la bisettrice
+                    bisector = calculate_bisector(lines[i], lines[j])
+                    bisector_lines = direction_to_line(bisector, intersection)
+                    
+                    # Definisci la lunghezza della bisettrice
+                    bisector_length = 50
+                    bisector_end_x = px + bisector[0] * bisector_length
+                    bisector_end_y = py + bisector[1] * bisector_length
 
-                if not is_overlapping:  # Solo se non è sovrapposta, aggiungiamo i dati
-                    intersections_data.append(((px, py), (bisector_end_x, bisector_end_y), angle))
+                    is_overlapping = False
+                    for line in lines:
+                        if are_lines_overlapping(bisector_lines, line, 10):  # Se la bisettrice è sovrapposta
+                            is_overlapping = True
+                            break
 
+                    if not is_overlapping:  # Solo se non è sovrapposta, aggiungiamo i dati
+                        intersections_data.append(((px, py), (bisector_end_x, bisector_end_y), angle))
 
     return np.array(intersections_data)
 
@@ -502,4 +528,4 @@ imageURL2 = "./Federico/img/parcheggio3.jpg"
 
 process_image(imageURL)
 process_image(imageURL2)
-process_image(imageURLAlto)
+#process_image(imageURLAlto)
