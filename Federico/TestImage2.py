@@ -130,8 +130,6 @@ def detect_lines_and_draw_intersections(image, original_image):
         #else:
             #print(f"Warning: Punto fuori dai limiti: ({x}, {y})")
 
-
-
     # Mostra l'immagine finale
     cv2.imshow("Detected Lines, Intersections, and Angles", image_rgb)
     cv2.waitKey(0)
