@@ -157,35 +157,66 @@ def line_intersection(p1, p2, p3, p4):
     return (int(x), int(y))
 
 
-def find_bisectors_intersections(bisectors, image_width, image_height, max_distance=0.5):
+def find_intersections_between_arrays(array1, array2):
+    """
+    Trova le intersezioni tra le bisettrici in due array.
+    
+    :param array1: Primo array di bisettrici, ciascuna definita da (x1, y1, x2, y2).
+    :param array2: Secondo array di bisettrici, ciascuna definita da (x1, y1, x2, y2).
+    :return: Lista di intersezioni come tuple (px, py).
+    """
     intersections = []
     
-    for i in range(len(bisectors)):
-        for j in range(i + 1, len(bisectors)):
-            # Prendi due bisettrici (ogni bisettrice è una coppia di punti)
-            (x1, y1), (x2, y2) = bisectors[i]
-            (x3, y3), (x4, y4) = bisectors[j]
-            
-            # Calcola il punto di intersezione tra le due linee (bisettrici)
-            intersection_point = line_intersection((x1, y1), (x2, y2), (x3, y3), (x4, y4))
-            
-            if intersection_point:
-                intersections.append(intersection_point)
-                """
-                # Verifica se l'intersezione è entro la distanza massima dalle due linee
-                (ix, iy) = intersection_point
-                dist1 = distance_point_to_line(ix, iy, x1, y1, x2, y2)
-                dist2 = distance_point_to_line(ix, iy, x3, y3, x4, y4)
-                
-                # Aggiungi l'intersezione solo se è entro la distanza massima dalle linee
-                if dist1 <= max_distance and dist2 <= max_distance:
-                    # Controlla se il punto di intersezione è dentro l'immagine
-                    if is_point_within_image(ix, iy, image_width, image_height):
-                        intersections.append(intersection_point)
-                    else:
-                        print(f"Punto di intersezione fuori dai limiti dell'immagine: {intersection_point}")
-                """
+    for line1 in array1:
+        for line2 in array2:
+            # Trova l'intersezione tra line1 e line2
+            intersection = find_line_intersection(line1, line2)
+            if intersection is not None:
+                intersections.append(intersection)
+    
     return intersections
+
+def find_line_intersection(line1, line2):
+    """
+    Calcola il punto di intersezione tra due rette estese indefinitamente, se esiste.
+
+    :param line1: Prima linea definita da (x1, y1, x2, y2).
+    :param line2: Seconda linea definita da (x1, y1, x2, y2).
+    :return: Punto di intersezione (px, py) se esiste, altrimenti None.
+    """
+    (x1, y1), (x2, y2) = line1
+    (x3, y3), (x4, y4) = line2
+    
+    # Calcola il determinante
+    denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+    if denom == 0:
+        return None  # Le rette sono parallele o coincidenti
+    
+    # Calcola le coordinate dell'intersezione
+    px = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / denom
+    py = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / denom
+    
+    return int(px), int(py)  # Restituisci il punto di intersezione
+
+def direction_to_line(direction_vector, origin, length=100):
+    """
+    Converte un vettore direzionale in una linea definita da due punti.
+    
+    :param direction_vector: Il vettore direzionale (come np.array).
+    :param origin: Il punto di origine della retta (px, py).
+    :param length: La lunghezza della retta (opzionale, default è 100).
+    :return: Due punti (x1, y1), (x2, y2) che rappresentano la retta.
+    """
+    # Normalizza il vettore direzionale
+    direction_vector = direction_vector / np.linalg.norm(direction_vector)
+
+    # Calcola i punti finali della retta estendendo il vettore dalla posizione di origine
+    x1, y1 = origin
+    x2 = x1 + direction_vector[0] * length
+    y2 = y1 + direction_vector[1] * length
+    
+    # Ritorna i due punti che definiscono la retta
+    return (x1, y1, x2, y2)
 
 def euclidean_distance(p1, p2):
     """
@@ -225,6 +256,7 @@ def detect_lines(image):
         cv2.line(image_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Linea verde
 
     bisectors = []
+    bisectors_specular = []
     # Disegna le intersezioni e le bisettrici
     for (px, py), (bisector_end_x, bisector_end_y), angle in intersections:
         
@@ -240,9 +272,9 @@ def detect_lines(image):
         if add_bisector:
             #trova la bisettrice speculare
             (dx, dy), (bisector_end_x_specular, bisector_end_y_specular) = perpendicular_line_with_angle(px, py, bisector_end_x, bisector_end_y)
-            #aggiunge le bisettrici alla lista
+            #aggiunge le bisettrici alle liste. Una per le bisettrici e le tangenti delle bisettrici
             bisectors.append(((px, py), (bisector_end_x, bisector_end_y)))
-            bisectors.append(((dx, dy), (bisector_end_x_specular, bisector_end_y_specular)))
+            bisectors_specular.append(((dx, dy), (bisector_end_x_specular, bisector_end_y_specular)))
             px, py = int(px), int(py)
             bisector_end_x, bisector_end_y = int(bisector_end_x), int(bisector_end_y)
             dx, dy = int(dx), int(dy)
@@ -250,12 +282,14 @@ def detect_lines(image):
             
             # Disegna il punto di intersezione
             cv2.circle(image_rgb, (int(px), int(py)), radius=5, color=(0, 255, 255), thickness=-1) # Disegna la bisettrice
-            cv2.line(image_rgb, (px, py), (bisector_end_x, bisector_end_y), (255, 255, 0), 2)  # Bisettrice verde
-            cv2.line(image_rgb, (dx, dy), (bisector_end_x_specular, bisector_end_y_specular ), (255, 255, 0), 2)
+            cv2.line(image_rgb, (px, py), (bisector_end_x, bisector_end_y), (255, 255, 0), 2)  # Bisettrice blu
+            cv2.line(image_rgb, (dx, dy), (bisector_end_x_specular, bisector_end_y_specular ), (255, 255, 255), 2) #bisettrice speculare bianca
             # Stampa l'angolo
             #print(f"Angolo tra i segmenti: {angle:.2f}°")
 
-    bisectors_intersections = find_bisectors_intersections(bisectors, 0, 0)
+    #bisectors_intersections = find_bisectors_intersections(bisectors, 0, 0)
+    bisectors_intersections = find_intersections_between_arrays(bisectors, bisectors_specular)
+    print("Intersezioni trovate:", bisectors_intersections)
 
     for (x, y) in bisectors_intersections:
         # Verifica se il punto è all'interno dei limiti dell'immagine
@@ -270,9 +304,42 @@ def detect_lines(image):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-
+def remove_overlapping_lines(array1, array2, threshold=5):
+    """
+    Rimuove le linee nel secondo array che sono sovrapposte a quelle nel primo array.
     
+    :param array1: Primo array di linee, ogni linea è definita da (x1, y1, x2, y2).
+    :param array2: Secondo array di linee, ogni linea è definita da (x1, y1, x2, y2).
+    :param threshold: Distanza massima per considerare due linee sovrapposte.
+    :return: Un nuovo array2 senza linee sovrapposte.
+    """
+    def is_close(line1, line2, threshold):
+        """
+        Verifica se due linee sono sovrapposte entro un certo threshold.
+        """
+        # Calcolo della distanza media tra i punti di una linea e quelli dell'altra
+        x1, y1, x2, y2 = line1
+        x3, y3, x4, y4 = line2
+        
+        # Controllo distanza tra i punti corrispondenti delle due linee
+        dist1 = np.sqrt((x1 - x3)**2 + (y1 - y3)**2)
+        dist2 = np.sqrt((x2 - x4)**2 + (y2 - y4)**2)
+        dist3 = np.sqrt((x1 - x4)**2 + (y1 - y4)**2)
+        dist4 = np.sqrt((x2 - x3)**2 + (y2 - y3)**2)
+        
+        return min(dist1, dist2, dist3, dist4) < threshold
 
+    filtered_array2 = []
+    for line2 in array2:
+        is_overlapping = False
+        for line1 in array1:
+            if is_close(line1, line2, threshold):
+                is_overlapping = True
+                break
+        if not is_overlapping:
+            filtered_array2.append(line2)
+    
+    return np.array(filtered_array2)
 
 
 def find_segment_intersection(line1: np.ndarray, line2: np.ndarray) -> np.ndarray:
@@ -297,6 +364,19 @@ def find_segment_intersection(line1: np.ndarray, line2: np.ndarray) -> np.ndarra
         return np.array([px, py])
     return np.array([])  # L'intersezione non è all'interno dei segmenti
 
+def are_lines_overlapping(line1, line2, threshold):
+    (x1, y1, x2, y2) = line1
+    (x3, y3, x4, y4) = line2
+
+    # Calcola distanze tra i punti corrispondenti
+    dist1 = np.sqrt((x1 - x3)**2 + (y1 - y3)**2)
+    dist2 = np.sqrt((x2 - x4)**2 + (y2 - y4)**2)
+    dist3 = np.sqrt((x1 - x4)**2 + (y1 - y4)**2)
+    dist4 = np.sqrt((x2 - x3)**2 + (y2 - y3)**2)
+
+    # Ritorna True se c'è una sovrapposizione entro il threshold
+    return min(dist1, dist2, dist3, dist4) < threshold
+
 def get_all_intersections(lines: np.ndarray) -> np.ndarray:
     """
     Trova tutte le intersezioni tra i segmenti di linee in un array e calcola le bisettrici e gli angoli.
@@ -316,69 +396,24 @@ def get_all_intersections(lines: np.ndarray) -> np.ndarray:
 
                 # Calcola la bisettrice
                 bisector = calculate_bisector(lines[i], lines[j])
+                bisector_lines = direction_to_line(bisector, intersection)
                 
                 # Definisci la lunghezza della bisettrice
                 bisector_length = 50
                 bisector_end_x = px + bisector[0] * bisector_length
                 bisector_end_y = py + bisector[1] * bisector_length
 
-                # Aggiungi i dati all'array delle intersezioni
-                intersections_data.append(((px, py), (bisector_end_x, bisector_end_y), angle))
+                is_overlapping = False
+                for line in lines:
+                    if are_lines_overlapping(bisector_lines, line, 10):  # Se la bisettrice è sovrapposta
+                        is_overlapping = True
+                        break
+
+                if not is_overlapping:  # Solo se non è sovrapposta, aggiungiamo i dati
+                    intersections_data.append(((px, py), (bisector_end_x, bisector_end_y), angle))
+
 
     return np.array(intersections_data)
-
-def merge_collinear_lines(lines, angle_tolerance=5, distance_threshold=20):
-    """
-    Unisce linee che sono sulla stessa retta in un unico segmento, solo se sono abbastanza vicine.
-    """
-    merged_lines = []
-    used = set()
-
-    for i, line1 in enumerate(lines):
-        if i in used:
-            continue
-
-        x1, y1, x2, y2 = line1
-        merged = False
-
-        for j, line2 in enumerate(lines[i + 1:], start=i + 1):
-            if j in used:
-                continue
-
-            x3, y3, x4, y4 = line2
-
-            # Calcola gli angoli delle linee
-            angle1 = np.arctan2(y2 - y1, x2 - x1)
-            angle2 = np.arctan2(y4 - y3, x4 - x3)
-
-            # Se le linee sono parallele (angolo simile), verifichiamo la distanza
-            if abs(np.degrees(angle1 - angle2)) < angle_tolerance:
-                distance = min(
-                    point_to_segment_distance(x1, y1, line2),
-                    point_to_segment_distance(x2, y2, line2),
-                    point_to_segment_distance(x3, y3, line1),
-                    point_to_segment_distance(x4, y4, line1)
-                )
-
-                if distance < distance_threshold:
-                    # Se le linee sono abbastanza vicine, uniscile in un unico segmento
-                    new_x1 = min(x1, x3)
-                    new_y1 = min(y1, y3)
-                    new_x2 = max(x2, x4)
-                    new_y2 = max(y2, y4)
-
-                    merged_lines.append((new_x1, new_y1, new_x2, new_y2))
-                    used.add(i)
-                    used.add(j)
-                    merged = True
-                    break
-
-        # Se la linea non è stata unita, aggiungila come è
-        if not merged:
-            merged_lines.append(line1)
-
-    return merged_lines
-
 
 def point_to_segment_distance(px, py, line):
     """
