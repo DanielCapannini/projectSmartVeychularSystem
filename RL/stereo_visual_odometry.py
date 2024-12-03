@@ -373,6 +373,6 @@ class VehicleEnv():
         fig_img = fig_img.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
         self._show_frame(cv2.cvtColor(fig_img, cv2.COLOR_RGB2BGR), name='figure')
 
-if __name__ == "__main__":
-    myEnv = VehicleEnv()
-    myEnv.visualize_trajectory()
+#if __name__ == "__main__":
+ #   myEnv = VehicleEnv()
+  #  myEnv.visualize_trajectory()
