@@ -7,7 +7,7 @@ def preprocess_image(image):
     _, thresholded = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     white_pixels = np.where(thresholded == 255)
     sorted_pixels = np.sort(gray_image[white_pixels])
-    threshold_value = sorted_pixels[int(0.85 * len(sorted_pixels))]
+    threshold_value = sorted_pixels[int(0.9 * len(sorted_pixels))]
     _, custom_thresholded = cv2.threshold(gray_image, threshold_value, 255, cv2.THRESH_BINARY)
     mask = np.zeros_like(gray_image)
     mask[custom_thresholded == 255] = gray_image[custom_thresholded == 255]
@@ -24,16 +24,24 @@ def spawn_vehicle(world, vehicle_index=0, pattern='vehicle.*'):
     vehicle = world.spawn_actor(vehicle_bp, spawn_point)
     return vehicle
 
-def spawn_camera(world, attach_to=None, transform=carla.Transform(carla.Location(x=1.2, z=1.2), carla.Rotation(pitch=-10)), width=800, height=600):
+def spawn_camera(world, attach_to=None, transform=carla.Transform(carla.Location(x=1.2, z=1.2), carla.Rotation(pitch=-30)), width=800, height=600):
     camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
     camera_bp.set_attribute('image_size_x', str(width))
     camera_bp.set_attribute('image_size_y', str(height))
     camera = world.spawn_actor(camera_bp, transform, attach_to=attach_to)
     return camera
 
-def spawn_camera_depth(world, attach_to=None, transform=carla.Transform(carla.Location(x=1.2, z=1.2), carla.Rotation(pitch=-10)), width=800, height=600):
+def spawn_camera_depth(world, attach_to=None, transform=carla.Transform(carla.Location(x=1.2, z=1.2), carla.Rotation(pitch=-10, yaw=180)), width=800, height=600):
     camera_bp = world.get_blueprint_library().find('sensor.camera.depth')
     camera_bp.set_attribute('image_size_x', str(width))
     camera_bp.set_attribute('image_size_y', str(height))
     camera = world.spawn_actor(camera_bp, transform, attach_to=attach_to)
     return camera
+
+def normalize_detph_image(image):
+    normalized_depth = (image[:, :, 0] + image[:, :, 1] * 256 + image[:, :, 2] * 256**2) / (256**3 - 1)
+    depth_in_meters = 1000 * normalized_depth
+    print(depth_in_meters)
+    depth_grayscale = cv2.normalize(depth_in_meters, None, 0, 255, cv2.NORM_MINMAX)
+    depth_grayscale = depth_grayscale.astype(np.uint8) 
+    return depth_grayscale
