@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 import carla
+import math
+import time
 
 def preprocess_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -45,3 +47,47 @@ def normalize_detph_image(image):
     depth_grayscale = cv2.normalize(depth_in_meters, None, 0, 255, cv2.NORM_MINMAX)
     depth_grayscale = depth_grayscale.astype(np.uint8) 
     return depth_grayscale
+
+def follow_curve(world, vehicle, curve_points, speed=30):
+    throttle = 0.5
+    brake = 0.0
+    steering = 0.0
+    for point in curve_points:
+        dx = point[0] - vehicle.get_location().x
+        dy = point[1] - vehicle.get_location().y
+        angle_to_target = math.atan2(dy, dx)
+        angle_difference = angle_to_target - vehicle.get_transform().rotation.yaw
+        if angle_difference > math.pi:
+            angle_difference -= 2 * math.pi
+        elif angle_difference < -math.pi:
+            angle_difference += 2 * math.pi
+        steering = max(-1.0, min(1.0, angle_difference / math.pi))
+        if abs(angle_difference) < 0.1:
+            throttle = 0.7
+        else:
+            throttle = 0.3
+        vehicle.apply_control(carla.VehicleControl(throttle=throttle, steer=steering, brake=brake, reverse=True))
+        world.tick()
+        time.sleep(0.1)
+
+def spline_cubica(p0, t0, p1, t1, num_points=100):
+    """
+    Calcola una spline cubica tra due punti con tangenti specificate.
+    
+    :param p0: Punto iniziale (x0, y0)
+    :param t0: Tangente al punto iniziale (tx0, ty0)
+    :param p1: Punto finale (x1, y1)
+    :param t1: Tangente al punto finale (tx1, ty1)
+    :param num_points: Numero di punti per disegnare la curva
+    :return: Lista di punti della spline cubica
+    """
+    t = np.linspace(0, 1, num_points)
+    h00 = 2 * t**3 - 3 * t**2 + 1
+    h10 = t**3 - 2 * t**2 + t
+    h01 = -2 * t**3 + 3 * t**2
+    h11 = t**3 - t**2
+
+    spline_x = h00 * p0[0] + h10 * t0[0] + h01 * p1[0] + h11 * t1[0]
+    spline_y = h00 * p0[1] + h10 * t0[1] + h01 * p1[1] + h11 * t1[1]
+
+    return np.array(list(zip(spline_x, spline_y)), dtype=np.int32)
