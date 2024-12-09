@@ -4,6 +4,8 @@ import carla
 import math
 import time
 
+template = cv2.imread('output2/template.png', cv2.IMREAD_GRAYSCALE)
+
 def preprocess_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, thresholded = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -91,3 +93,11 @@ def spline_cubica(p0, t0, p1, t1, num_points=100):
     spline_y = h00 * p0[1] + h10 * t0[1] + h01 * p1[1] + h11 * t1[1]
 
     return np.array(list(zip(spline_x, spline_y)), dtype=np.int32)
+
+def riconosci_parcheggio(image):
+    result = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
+    _, max_val, _, max_loc = cv2.minMaxLoc(result)
+    template_height, template_width = template.shape
+    top_left = max_loc
+    bottom_right = (top_left[0] + template_width, top_left[1] + template_height)
+    return max_val, top_left, bottom_right
