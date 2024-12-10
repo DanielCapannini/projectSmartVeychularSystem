@@ -81,9 +81,9 @@ def draw_horizontal_line(image):
 
     return image_with_line
 
-def color_shapes(image, color=(0, 255, 0), min_area=500):
+def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500):
     """
-    Trova le forme nell'immagine binaria (dentro le linee bianche) e le colora con un altro colore.
+    Trova le aree nere chiuse delimitate da righe bianche e le colora con un altro colore.
     
     Args:
         image (numpy.ndarray): Immagine binaria (0 e 255).
@@ -91,26 +91,34 @@ def color_shapes(image, color=(0, 255, 0), min_area=500):
         min_area (int): L'area minima di un contorno per essere colorato (default 500).
     
     Returns:
-        numpy.ndarray: Immagine con le forme colorate.
+        numpy.ndarray: Immagine con le aree nere colorate.
     """
     # Crea una copia dell'immagine per non modificare l'originale
     colored_image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)  # Converti l'immagine in un'immagine a colori
 
-    # Trova i contorni nell'immagine binaria
-    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Trova i contorni nell'immagine binaria (invertiamo l'immagine per cercare il nero)
+    contours, _ = cv2.findContours(255 - image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Filtra i contorni per area minima
+    # Ottieni le dimensioni dell'immagine
+    height, width = image.shape
+
+    # Filtra i contorni per area minima e quelli che non toccano i bordi
     for contour in contours:
-        if cv2.contourArea(contour) > min_area:  # Verifica se l'area del contorno è maggiore della soglia
-            # Riempi il contorno con il colore specificato
-            cv2.drawContours(colored_image, [contour], -1, color, thickness=cv2.FILLED)
+        area = cv2.contourArea(contour)
+        x, y, w, h = cv2.boundingRect(contour)  # Ottieni il rettangolo del contorno
+
+        # Controlla che il contorno non tocchi i bordi
+        if x > 0 and y > 0 and (x + w) < width and (y + h) < height:
+            if area > min_area:  # Verifica se l'area del contorno è maggiore della soglia
+                # Riempi il contorno con il colore specificato
+                cv2.drawContours(colored_image, [contour], -1, color, thickness=cv2.FILLED)
 
     return colored_image
 
 def process_image(imageURL):
     image_opened = preprocess_image(imageURL)  # Pre-processing dell'immagine
     image_with_lines = draw_horizontal_line(image_opened)  # Rilevamento delle linee
-    image_parking_found = color_shapes(image_with_lines)
+    image_parking_found = color_enclosed_black_areas(image_with_lines)
 
     # Mostra l'immagine con la linea
     cv2.imshow("Image with Horizontal Lines", image_parking_found)
@@ -124,7 +132,7 @@ def process_image(imageURL):
 imageURL = "./Federico/img/parcheggio.jpg"
 imageURLAlto = "./Federico/img/parcheggioAlto.jpg"
 imageURL2 = "./Federico/img/parcheggio3.jpg"
-ImageURLNew = "./RL/guida/output3/4365.png"
+ImageURLNew = "./RL/guida/output3/4685.png"
 ImageURLNew2 = "./RL/guida/output3/4700.png"
 
 process_image(ImageURLNew)
