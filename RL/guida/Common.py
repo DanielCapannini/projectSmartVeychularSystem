@@ -42,12 +42,11 @@ def spawn_camera_depth(world, attach_to=None, transform=carla.Transform(carla.Lo
     camera = world.spawn_actor(camera_bp, transform, attach_to=attach_to)
     return camera
 
-def normalize_detph_image(image):
+def normalize_depth_image(image):
     normalized_depth = (image[:, :, 0] + image[:, :, 1] * 256 + image[:, :, 2] * 256**2) / (256**3 - 1)
     depth_in_meters = 1000 * normalized_depth
-    print(depth_in_meters)
     depth_grayscale = cv2.normalize(depth_in_meters, None, 0, 255, cv2.NORM_MINMAX)
-    depth_grayscale = depth_grayscale.astype(np.uint8) 
+    depth_grayscale = np.uint8(depth_grayscale)
     return depth_grayscale
 
 def follow_curve(world, vehicle, curve_points, speed=30):
