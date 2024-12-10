@@ -1,6 +1,7 @@
 
 import cv2
 import numpy as np
+import random
 from typing import List, Tuple, Optional
 
 
@@ -274,7 +275,7 @@ def detect_lines(image):
     all_lines = [(x1, y1, x2, y2) for x1, y1, x2, y2 in lines[:, 0]]
 
     # Estendi le linee
-    extended_lines = [extend_line(line, 0, 50, direction="both") for line in all_lines]
+    extended_lines = [extend_line(line, 0, 100, direction="both") for line in all_lines]
 
     # Trova tutte le intersezioni tra i segmenti
     intersections = get_all_intersections(np.array(extended_lines))
@@ -327,6 +328,10 @@ def detect_lines(image):
         #else:
             #print(f"Warning: Punto fuori dai limiti: ({x}, {y})")
     
+    lines_to_trapezoid = []
+    lines_to_trapezoid = draw_horizontal_and_vertical_lines_and_find_intersections(image_rgb, bisectors_intersections, extended_lines)
+    draw_trapezoids(image_rgb, lines_to_trapezoid)
+
     # Mostra l'immagine finale con le linee, le intersezioni e le bisettrici
     cv2.imshow("Detected Lines, Intersections, and Bisectors", image_rgb)
     cv2.waitKey(0)
@@ -413,6 +418,8 @@ def get_all_intersections(lines: np.ndarray) -> np.ndarray:
     """
     intersections_data = []
 
+    first = True
+
     for i in range(len(lines)):
         for j in range(i + 1, len(lines)):
             intersection = find_segment_intersection(lines[i], lines[j])
@@ -426,7 +433,10 @@ def get_all_intersections(lines: np.ndarray) -> np.ndarray:
                     print(f"Angolo tra i segmenti: {angle:.2f}°")
 
                     # Calcola la bisettrice
-                    bisector = calculate_bisector(lines[i], lines[j])
+                    if first:
+                        bisector = calculate_bisector(lines[i], lines[j])
+                        first = False
+
                     bisector_lines = direction_to_line(bisector, intersection)
                     
                     # Definisci la lunghezza della bisettrice
@@ -445,76 +455,157 @@ def get_all_intersections(lines: np.ndarray) -> np.ndarray:
 
     return np.array(intersections_data)
 
-def point_to_segment_distance(px, py, line):
+def draw_horizontal_and_vertical_lines_and_find_intersections(image, points, lines):
     """
-    Calcola la distanza minima tra un punto (px, py) e un segmento definito da 'line'.
+    Disegna linee parallele agli assi X e Y attraverso i punti, colora le linee dell'array che si intersecano 
+    con queste linee e restituisce le linee trovate solo se esiste una triade (destra, sinistra, sopra).
+    :param image: Immagine su cui disegnare.
+    :param points: Lista di punti, ogni punto è una tupla (px, py).
+    :param lines: Lista di linee, ogni linea è una tupla ((x1, y1), (x2, y2)).
+    :return: Lista di triple (linea_sinistra, linea_destra, linea_sopra) per ogni punto.
     """
-    x1, y1, x2, y2 = line
-    line_length = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    if line_length == 0:
-        return np.sqrt((px - x1) ** 2 + (py - y1) ** 2)  # La linea è un punto
+    if len(image.shape) == 2:  # Se l'immagine è in scala di grigi
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    else:
+        image_rgb = image.copy()
+    
+    found_lines = []  # Lista per salvare le triple di linee trovate
+    
+    for px, py in points:
+        # Genera un colore randomico
+        random_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        
+        # Verifica intersezioni con le linee per la linea orizzontale
+        closest_left = None
+        closest_right = None
+        min_distance_left = float('inf')
+        min_distance_right = float('inf')
 
-    # Proiezione del punto sul segmento
-    t = max(0, min(1, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / (line_length ** 2)))
-    proj_x = x1 + t * (x2 - x1)
-    proj_y = y1 + t * (y2 - y1)
-
-    # Distanza dal punto alla proiezione
-    return np.sqrt((px - proj_x) ** 2 + (py - proj_y) ** 2)
-
-def merge_parallel_lines(lines, angle_tolerance=5, distance_threshold=20):
-    merged_lines = []
-    used = set()
-
-    for i, line1 in enumerate(lines):
-        if i in used:
-            continue
-
-        x1, y1, x2, y2 = line1
-        angle1 = np.arctan2(y2 - y1, x2 - x1)
-
-        for j, line2 in enumerate(lines[i+1:], start=i+1):
-            if j in used:
+        for (x1, y1, x2, y2) in lines:
+            # Evita le linee orizzontali
+            if y2 == y1:
                 continue
+            
+            # Trova il punto di intersezione tra la linea orizzontale e questa linea
+            if (y1 <= py <= y2) or (y2 <= py <= y1):  # Verifica se l'intersezione è valida
+                t = (py - y1) / (y2 - y1)
+                intersect_x = x1 + t * (x2 - x1)
 
-            x3, y3, x4, y4 = line2
-            angle2 = np.arctan2(y4 - y3, x4 - x3)
+                if intersect_x < px and abs(px - intersect_x) < min_distance_left:
+                    min_distance_left = abs(px - intersect_x)
+                    closest_left = ((x1, y1), (x2, y2))
+                elif intersect_x > px and abs(px - intersect_x) < min_distance_right:
+                    min_distance_right = abs(px - intersect_x)
+                    closest_right = ((x1, y1), (x2, y2))
 
-            # Calcola la distanza minima tra le linee
-            distance = min(
-                np.linalg.norm([x1 - x3, y1 - y3]),
-                np.linalg.norm([x1 - x4, y1 - y4]),
-                np.linalg.norm([x2 - x3, y2 - y3]),
-                np.linalg.norm([x2 - x4, y2 - y4]),
-            )
+        # Verifica intersezioni con le linee per la linea verticale
+        closest_above = None
+        min_distance_above = float('inf')
 
-            # Verifica se sono parallele e vicine
-            if abs(np.degrees(angle1 - angle2)) < angle_tolerance and distance < distance_threshold:
-                # Crea un rettangolo/romboidale unendo le linee
-                merged_line = [
-                    [x1, y1], [x2, y2],
-                    [x4, y4], [x3, y3]
-                ]
-                merged_lines.append(np.array(merged_line, dtype=np.int32))
-                used.add(i)
-                used.add(j)
-                break
+        for (x1, y1, x2, y2) in lines:
+            # Evita le linee verticali
+            if x2 == x1:
+                continue
+            
+            # Trova il punto di intersezione tra la linea verticale e questa linea
+            if (x1 <= px <= x2) or (x2 <= px <= x1):  # Verifica se l'intersezione è valida
+                t = (px - x1) / (x2 - x1)
+                intersect_y = y1 + t * (y2 - y1)
 
-        if i not in used:
-            merged_lines.append(np.array([[x1, y1], [x2, y2], [x2, y2], [x1, y1]], dtype=np.int32))
+                if intersect_y < py and abs(py - intersect_y) < min_distance_above:
+                    min_distance_above = abs(py - intersect_y)
+                    closest_above = ((x1, y1), (x2, y2))
 
-    return merged_lines
+        # Aggiungi la triade solo se tutte e tre le linee sono state trovate
+        if closest_left and closest_right and closest_above:
+            cv2.line(image_rgb, closest_left[0], closest_left[1], random_color, 2)
+            cv2.line(image_rgb, closest_right[0], closest_right[1], random_color, 2)
+            cv2.line(image_rgb, closest_above[0], closest_above[1], random_color, 2)
 
-def draw_center_circle(image, approx):
-    # Calcola i momenti del contorno per trovare il centro del rettangolo
-    M = cv2.moments(approx)
-    if M["m00"] != 0:
-        cx = int(M["m10"] / M["m00"])
-        cy = int(M["m01"] / M["m00"])
+            # Salva la triade
+            found_lines.append((
+                closest_left[0][0], closest_left[0][1], closest_left[1][0], closest_left[1][1],
+                closest_right[0][0], closest_right[0][1], closest_right[1][0], closest_right[1][1],
+                closest_above[0][0], closest_above[0][1], closest_above[1][0], closest_above[1][1],
+            ))
 
-        # Disegna il cerchio giallo (BGR: [0, 255, 255]) al centro del rettangolo
-        cv2.circle(image, (cx, cy), 10, (0, 255, 255), -1)  # Cerchio giallo con raggio 10
+    # Mostra l'immagine finale
+    cv2.imshow("Horizontal and Vertical Lines with Colored Intersections", image_rgb)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
+    return found_lines
+
+def get_line_coefficients(x1, y1, x2, y2):
+    """
+    Calcola i coefficienti A, B, C della retta definita dai punti (x1, y1) e (x2, y2)
+    in forma implicita Ax + By + C = 0.
+    """
+    A = y2 - y1
+    B = x1 - x2
+    C = x2 * y1 - x1 * y2
+    return A, B, C
+
+def get_intersection_of_lines(A1, B1, C1, A2, B2, C2):
+    """
+    Trova l'intersezione tra due rette date dai coefficienti A, B, C.
+    """
+    denom = A1 * B2 - A2 * B1
+    if denom == 0:
+        return None  # Le rette sono parallele
+    x = (B1 * C2 - B2 * C1) / denom
+    y = (A2 * C1 - A1 * C2) / denom
+    return x, y
+
+def draw_trapezoids(image, found_lines):
+    """
+    Dato un array di linee (sinistra, destra, sopra), tenta di disegnare un trapezio riempito sull'immagine.
+    Se non è possibile, rimuove il set di linee dalla lista.
+    
+    :param image: L'immagine su cui disegnare.
+    :param found_lines: Lista di linee nel formato:
+                        (x1_left, y1_left, x2_left, y2_left,
+                         x1_right, y1_right, x2_right, y2_right,
+                         x1_above, y1_above, x2_above, y2_above)
+    :return: Lista aggiornata con solo i trapezi validi.
+    """
+    valid_trapezoids = []
+
+    for line in found_lines:
+        # Estrai le coordinate delle linee
+        x1_left, y1_left, x2_left, y2_left = line[:4]
+        x1_right, y1_right, x2_right, y2_right = line[4:8]
+        x1_above, y1_above, x2_above, y2_above = line[8:12]
+
+        # Calcola i coefficienti delle rette
+        A_left, B_left, C_left = get_line_coefficients(x1_left, y1_left, x2_left, y2_left)
+        A_right, B_right, C_right = get_line_coefficients(x1_right, y1_right, x2_right, y2_right)
+        A_above, B_above, C_above = get_line_coefficients(x1_above, y1_above, x2_above, y2_above)
+
+        # Trova le intersezioni: (sinistra/sopra) e (destra/sopra)
+        intersection_left = get_intersection_of_lines(A_left, B_left, C_left, A_above, B_above, C_above)
+        intersection_right = get_intersection_of_lines(A_right, B_right, C_right, A_above, B_above, C_above)
+
+        if intersection_left and intersection_right:
+            x_intersect_left, y_intersect_left = intersection_left
+            x_intersect_right, y_intersect_right = intersection_right
+
+            # Crea un trapezio con i punti trovati
+            trapezoid_points = np.array([
+                [int(x1_left), int(y1_left)],  # Estremo inferiore sinistra
+                [int(x2_left), int(y2_left)],  # Estremo superiore sinistra
+                [int(x_intersect_right), int(y_intersect_right)],  # Intersezione destra
+                [int(x_intersect_left), int(y_intersect_left)],  # Intersezione sinistra
+            ], dtype=np.int32)
+
+            # Colora il trapezio riempito
+            color = tuple(np.random.randint(0, 255, size=3).tolist())
+            cv2.fillPoly(image, [trapezoid_points], color)
+
+            # Aggiungi il trapezio valido alla lista
+            valid_trapezoids.append(line)
+
+    return valid_trapezoids
 
 # Funzione principale per elaborare l'immagine
 def process_image(imageURL):

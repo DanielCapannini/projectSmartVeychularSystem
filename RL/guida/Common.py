@@ -4,6 +4,8 @@ import carla
 import math
 import time
 
+template = cv2.imread('output2/template2.png', cv2.IMREAD_GRAYSCALE)
+
 def preprocess_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, thresholded = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -18,6 +20,13 @@ def preprocess_image(image):
     image_opened = cv2.morphologyEx(image_closed, cv2.MORPH_OPEN, (5,5))
     image_opened[image_opened > 0] = 255
     return image_opened
+
+def preprocess_image2(image):
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, binary_mask = cv2.threshold(gray_image, 200, 255, cv2.THRESH_BINARY)
+    kernel = np.ones((5, 5), np.uint8)
+    mask_cleaned = cv2.morphologyEx(binary_mask, cv2.MORPH_CLOSE, kernel)
+    return mask_cleaned
 
 def spawn_vehicle(world, vehicle_index=0, pattern='vehicle.*'):
     blueprint_library = world.get_blueprint_library()
@@ -40,12 +49,11 @@ def spawn_camera_depth(world, attach_to=None, transform=carla.Transform(carla.Lo
     camera = world.spawn_actor(camera_bp, transform, attach_to=attach_to)
     return camera
 
-def normalize_detph_image(image):
+def normalize_depth_image(image):
     normalized_depth = (image[:, :, 0] + image[:, :, 1] * 256 + image[:, :, 2] * 256**2) / (256**3 - 1)
     depth_in_meters = 1000 * normalized_depth
-    print(depth_in_meters)
     depth_grayscale = cv2.normalize(depth_in_meters, None, 0, 255, cv2.NORM_MINMAX)
-    depth_grayscale = depth_grayscale.astype(np.uint8) 
+    depth_grayscale = np.uint8(depth_grayscale)
     return depth_grayscale
 
 def follow_curve(world, vehicle, curve_points, speed=30):
@@ -91,3 +99,31 @@ def spline_cubica(p0, t0, p1, t1, num_points=100):
     spline_y = h00 * p0[1] + h10 * t0[1] + h01 * p1[1] + h11 * t1[1]
 
     return np.array(list(zip(spline_x, spline_y)), dtype=np.int32)
+
+def riconosci_parcheggio(image):
+    result = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
+    _, max_val, _, max_loc = cv2.minMaxLoc(result)
+    template_height, template_width = template.shape
+    top_left = max_loc
+    bottom_right = (top_left[0] + template_width, top_left[1] + template_height)
+    return max_val, top_left, bottom_right
+
+
+
+def riconosci_parcheggio1(image):
+    template_height, template_width = template.shape
+    scales = np.linspace(0.5, 1.5, 10)[::-1]
+    max_val = -1
+    max_loc = None
+    best_scale = 1
+    for scale in scales:
+        target_resized = cv2.resize(image, (0, 0), fx=scale, fy=scale)
+        if target_resized.shape[0] < template_height or target_resized.shape[1] < template_width:
+            continue
+        result = cv2.matchTemplate(target_resized, template, cv2.TM_CCOEFF_NORMED)
+        min_val, max_val_current, min_loc, max_loc_current = cv2.minMaxLoc(result)
+        if max_val_current > max_val:
+            max_val = max_val_current
+            max_loc = max_loc_current
+            best_scale = scale
+    return max_val
