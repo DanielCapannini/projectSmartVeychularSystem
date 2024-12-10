@@ -4,7 +4,7 @@ import carla
 import math
 import time
 
-template = cv2.imread('output2/template.png', cv2.IMREAD_GRAYSCALE)
+template = cv2.imread('output2/template2.png', cv2.IMREAD_GRAYSCALE)
 
 def preprocess_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
