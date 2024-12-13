@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 import carla
+import tensorflow as tf
+from tensorflow.keras import models
 
 def preprocess_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -20,11 +22,18 @@ def preprocess_image(image):
 def spawn_vehicle(world, vehicle_index=0, spawn_index=0, pattern='vehicle.*'):
     blueprint_library = world.get_blueprint_library()
     vehicle_bp = blueprint_library.filter(pattern)[vehicle_index]
-    spawn_point = world.get_map().get_spawn_points()[spawn_index]
+    spawn_point = carla.Transform(carla.Location(-1, -30, 2), carla.Rotation(yaw=90))
     vehicle = world.spawn_actor(vehicle_bp, spawn_point)
     return vehicle
 
 def spawn_camera(world, attach_to=None, transform=carla.Transform(carla.Location(x=1.2, z=1.2), carla.Rotation(pitch=-10)), width=800, height=600):
+    camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
+    camera_bp.set_attribute('image_size_x', str(width))
+    camera_bp.set_attribute('image_size_y', str(height))
+    camera = world.spawn_actor(camera_bp, transform, attach_to=attach_to)
+    return camera
+
+def spawn_camera_depth(world, attach_to=None, transform=carla.Transform(carla.Location(x=1.2, z=1.2), carla.Rotation(pitch=-10)), width=800, height=600):
     camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
     camera_bp.set_attribute('image_size_x', str(width))
     camera_bp.set_attribute('image_size_y', str(height))
