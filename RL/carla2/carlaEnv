@@ -1,0 +1,61 @@
+import carla
+import gym
+import numpy as np
+from Common import spawn_vehicle, spawn_camera
+
+class CarlaEnv(gym.Env):
+    def __init__(self, host='localhost', port=2000):
+        super(CarlaEnv, self).__init__()
+        
+        # Connessione a CARLA
+        self.client = carla.Client(host, port)
+        self.client.set_timeout(20.0)
+        self.client.load_world('Town05')
+        self.world = self.client.get_world()
+        self.blueprint_library = self.world.get_blueprint_library()
+
+        # Creazione del veicolo
+        vehicle_bp = spawn_vehicle(self.world)
+
+        # Aggiunta di tre telecamere
+        self.cameras = []
+        camera_positions = [
+            (carla.Transform(carla.Location(x=1.5, z=2.4), carla.Rotation(pitch=-25)), (600, 600)),  # Front camera
+            (carla.Transform(carla.Location(x=-0.5, y=-0.9, z=2.4), carla.Rotation(yaw=-45, pitch=-25)), (600, 600)),  # Left side camera
+            (carla.Transform(carla.Location(x=-0.5, y=0.9, z=2.4), carla.Rotation(yaw=45, pitch=-25)), (600, 600)),  # Right side camera
+        ]
+
+        for position in camera_positions:
+            camera_bp = self.blueprint_library.find('sensor.camera.rgb')
+            camera = self.world.spawn_actor(camera_bp, position, attach_to=self.vehicle)
+            camera.listen(self._process_image)
+            self.cameras.append(camera)
+
+        self.state = None
+        self.done = False
+
+    def _process_image(self, image):
+        array = np.frombuffer(image.raw_data, dtype=np.uint8)
+        array = array.reshape((image.height, image.width, 4))
+        self.state = array[:, :, :3]  # RGB
+
+    def step(self, action):
+        throttle, steer = action
+        self.vehicle.apply_control(carla.VehicleControl(throttle=throttle, steer=steer))
+        reward = self._compute_reward()
+        return self.state, reward, self.done, {}
+
+    def reset(self):
+        self.vehicle.set_transform(self.world.get_map().get_spawn_points()[0])
+        self.state = None
+        self.done = False
+        return self.state
+
+    def _compute_reward(self):
+        # Logica per il reward (es: distanza percorsa, collisioni)
+        return 0.0
+
+    def close(self):
+        for camera in self.cameras:
+            camera.destroy()
+        self.vehicle.destroy()
