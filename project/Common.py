@@ -1,4 +1,4 @@
-import cv2
+import cv2, math
 import numpy as np
 import carla
 
@@ -84,3 +84,91 @@ def spawn_camera(world, attach_to=None, transform=carla.Transform(carla.Location
     camera_bp.set_attribute('image_size_y', str(height))
     camera = world.spawn_actor(camera_bp, transform, attach_to=attach_to)
     return camera
+
+def spline_cubica(p0, t0, p1, t1, num_points=100):
+    """
+    Calcola una spline cubica tra due punti con tangenti specificate.
+    
+    :param p0: Punto iniziale (x0, y0)
+    :param t0: Tangente al punto iniziale (tx0, ty0)
+    :param p1: Punto finale (x1, y1)
+    :param t1: Tangente al punto finale (tx1, ty1)
+    :param num_points: Numero di punti per disegnare la curva
+    :return: Lista di punti della spline cubica
+    """
+    t0 = np.array(t0) - np.array(p0) 
+    t1 = np.array(t1) - np.array(p1)
+    t = np.linspace(0, 1, num_points)
+    h00 = 2 * t**3 - 3 * t**2 + 1
+    h10 = t**3 - 2 * t**2 + t
+    h01 = -2 * t**3 + 3 * t**2
+    h11 = t**3 - t**2
+
+    spline_x = h00 * p0[0] + h10 * t0[0] + h01 * p1[0] + h11 * t1[0]
+    spline_y = h00 * p0[1] + h10 * t0[1] + h01 * p1[1] + h11 * t1[1]
+
+    return np.array(list(zip(spline_x, spline_y)), dtype=np.int32)
+
+def find_highest_segment_midpoint_and_perpendicular(mask):
+    """
+    Trova il segmento più alto in un'immagine binaria utilizzando la trasformata di Hough, calcola
+    il punto medio e determina una retta perpendicolare al segmento.
+
+    Args:
+        mask (numpy.ndarray): Immagine binaria (0 e 255).
+
+    Returns:
+        tuple: Coordinata (x, y) del punto medio e punti di inizio e fine della retta perpendicolare.
+    """
+    # Trova linee con la trasformata di Hough
+    lines = cv2.HoughLinesP(mask, rho=1, theta=np.pi/180, threshold=100, minLineLength=50, maxLineGap=10)
+
+    if lines is None:
+        return None, None, None  # Nessuna linea trovata
+
+    # Trova il segmento più alto
+    highest_segment = None
+    min_y = float('inf')
+
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        avg_y = (y1 + y2) / 2
+        if avg_y < min_y:
+            min_y = avg_y
+            highest_segment = (x1, y1, x2, y2)
+
+    if highest_segment is None:
+        return None, None, None  # Nessun segmento valido trovato
+
+    x1, y1, x2, y2 = highest_segment
+
+    # Calcola il punto medio del segmento
+    midpoint = ((x1 + x2) // 2, (y1 + y2) // 2)
+
+    # Calcola la pendenza del segmento
+    if x2 != x1:  # Evita divisioni per zero
+        slope = (y2 - y1) / (x2 - x1)
+    else:
+        slope = float('inf')  # Segmento verticale
+
+    # Calcola la pendenza della retta perpendicolare
+    if slope != 0 and slope != float('inf'):
+        perp_slope = -1 / slope
+    else:
+        perp_slope = 0 if slope == float('inf') else float('inf')
+
+    # Calcola i punti di inizio e fine della retta perpendicolare
+    length = 50  # Lunghezza della retta perpendicolare (metà sopra e metà sotto il punto medio)
+    if perp_slope == float('inf'):
+        perp_start = (midpoint[0], midpoint[1] - length)
+        perp_end = (midpoint[0], midpoint[1] + length)
+    elif perp_slope == 0:
+        perp_start = (midpoint[0] - length, midpoint[1])
+        perp_end = (midpoint[0] + length, midpoint[1])
+    else:
+        dx = int(length / math.sqrt(1 + perp_slope**2))
+        dy = int(perp_slope * dx)
+        perp_start = (midpoint[0] - dx, midpoint[1] - dy)
+        perp_end = (midpoint[0] + dx, midpoint[1] + dy)
+
+    return midpoint, perp_start, perp_end
