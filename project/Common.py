@@ -103,10 +103,8 @@ def spline_cubica(p0, t0, p1, t1, num_points=100):
     h10 = t**3 - 2 * t**2 + t
     h01 = -2 * t**3 + 3 * t**2
     h11 = t**3 - t**2
-
     spline_x = h00 * p0[0] + h10 * t0[0] + h01 * p1[0] + h11 * t1[0]
     spline_y = h00 * p0[1] + h10 * t0[1] + h01 * p1[1] + h11 * t1[1]
-
     return np.array(list(zip(spline_x, spline_y)), dtype=np.int32)
 
 def find_highest_segment_midpoint_and_perpendicular(mask):
@@ -120,45 +118,30 @@ def find_highest_segment_midpoint_and_perpendicular(mask):
     Returns:
         tuple: Coordinata (x, y) del punto medio e punti di inizio e fine della retta perpendicolare.
     """
-    # Trova linee con la trasformata di Hough
     lines = cv2.HoughLinesP(mask, rho=1, theta=np.pi/180, threshold=100, minLineLength=50, maxLineGap=10)
-
     if lines is None:
-        return None, None, None  # Nessuna linea trovata
-
-    # Trova il segmento più alto
+        return None, None, None 
     highest_segment = None
     min_y = float('inf')
-
     for line in lines:
         x1, y1, x2, y2 = line[0]
         avg_y = (y1 + y2) / 2
         if avg_y < min_y:
             min_y = avg_y
             highest_segment = (x1, y1, x2, y2)
-
     if highest_segment is None:
-        return None, None, None  # Nessun segmento valido trovato
-
+        return None, None, None 
     x1, y1, x2, y2 = highest_segment
-
-    # Calcola il punto medio del segmento
     midpoint = ((x1 + x2) // 2, (y1 + y2) // 2)
-
-    # Calcola la pendenza del segmento
-    if x2 != x1:  # Evita divisioni per zero
+    if x2 != x1: 
         slope = (y2 - y1) / (x2 - x1)
     else:
-        slope = float('inf')  # Segmento verticale
-
-    # Calcola la pendenza della retta perpendicolare
+        slope = float('inf') 
     if slope != 0 and slope != float('inf'):
         perp_slope = -1 / slope
     else:
         perp_slope = 0 if slope == float('inf') else float('inf')
-
-    # Calcola i punti di inizio e fine della retta perpendicolare
-    length = 50  # Lunghezza della retta perpendicolare (metà sopra e metà sotto il punto medio)
+    length = 50  
     if perp_slope == float('inf'):
         perp_start = (midpoint[0], midpoint[1] - length)
         perp_end = (midpoint[0], midpoint[1] + length)
@@ -170,5 +153,4 @@ def find_highest_segment_midpoint_and_perpendicular(mask):
         dy = int(perp_slope * dx)
         perp_start = (midpoint[0] - dx, midpoint[1] - dy)
         perp_end = (midpoint[0] + dx, midpoint[1] + dy)
-
     return midpoint, perp_start, perp_end
