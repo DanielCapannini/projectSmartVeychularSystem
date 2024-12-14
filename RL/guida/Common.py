@@ -56,7 +56,7 @@ def normalize_depth_image(image):
     depth_grayscale = np.uint8(depth_grayscale)
     return depth_grayscale
 
-def follow_curve(world, vehicle, curve_points, speed=30):
+def follow_curve(world, vehicle, curve_points, speed=10):
     throttle = 0.5
     brake = 0.0
     steering = 0.0
