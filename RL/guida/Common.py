@@ -78,6 +78,47 @@ def follow_curve(world, vehicle, curve_points, speed=10):
         world.tick()
         time.sleep(0.1)
 
+def follow_curve2(world, vehicle, curve_points, control, target_speed_mps=10):
+    angoli = angoli_da_punti(curve_points)
+    for angle in angoli:
+        angle_difference = angle - vehicle.get_transform().rotation.yaw
+        if angle_difference > math.pi:
+            angle_difference -= math.pi
+        elif angle_difference < -math.pi:
+            angle_difference += math.pi
+        control.steer = max(-1.0, min(1.0, angle_difference / math.pi))
+        current_velocity = vehicle.get_velocity()
+        current_speed_mps = current_velocity.length()
+        control = controllo_velocita(control, target_speed_mps, current_speed_mps)
+        vehicle.apply_control(control)
+        world.tick()
+        time.sleep(0.1)
+
+def angoli_da_punti(points):
+    angoli = []
+    for i in range(len(points) - 1):
+        p1 = points[i]
+        p2 = points[i + 1]
+        delta_x = p2[0] - p1[0]
+        delta_y = p2[1] - p1[1]
+        angolo = np.arctan2(delta_y, delta_x)
+        angolo_deg = np.degrees(angolo)
+        angoli.append(angolo_deg)
+    return angoli
+
+def controllo_velocita(control, target_speed_mps, current_speed_mps):
+    speed_error = target_speed_mps - current_speed_mps
+    if speed_error > 0:
+        control.throttle = min(1.0, 0.5 + speed_error * 0.5) 
+        control.brake = 0
+    elif speed_error < 0:
+        control.throttle = 0.0
+        control.brake = min(1.0, -speed_error * 0.5) 
+    else:
+        control.throttle = 0.0
+        control.brake = 0.0
+    return control
+
 def spline_cubica(p0, t0, p1, t1, num_points=100):
     """
     Calcola una spline cubica tra due punti con tangenti specificate.
