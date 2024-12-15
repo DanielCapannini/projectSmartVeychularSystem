@@ -106,6 +106,22 @@ def angoli_da_punti(points):
         angoli.append(angolo_deg)
     return angoli
 
+def control_retro(vehicle, midpoint, control, target_speed_mps=10/3.6):
+    if midpoint == None or midpoint[1] > 380:
+        control.throttle = 0.0
+        control.brake = 1.0
+        vehicle.apply_control(control)
+        time.sleep(0.1)
+        return True
+    else:
+        control.steer = -((midpoint[0] / 400) - 1)
+        current_velocity = vehicle.get_velocity()
+        current_speed_mps = current_velocity.length()
+        control = controllo_velocita(control, target_speed_mps, current_speed_mps)
+        vehicle.apply_control(control)
+        time.sleep(0.1)
+        return False
+
 def controllo_velocita(control, target_speed_mps, current_speed_mps):
     speed_error = target_speed_mps - current_speed_mps
     if speed_error > 0:
