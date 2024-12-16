@@ -81,7 +81,7 @@ def draw_horizontal_line(image):
 
     return image_with_line
 
-def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500):
+def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500, epsilon_factor=0.02):
     """
     Trova le aree nere chiuse delimitate da righe bianche e le colora con un altro colore.
     
@@ -112,8 +112,70 @@ def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500):
             if area > min_area:  # Verifica se l'area del contorno è maggiore della soglia
                 # Riempi il contorno con il colore specificato
                 cv2.drawContours(colored_image, [contour], -1, color, thickness=cv2.FILLED)
+                        # Filtra per area
+                area = cv2.contourArea(contour)
+                
+                # Approssima il contorno a un poligono
+                epsilon = epsilon_factor * cv2.arcLength(contour, True)
+                approx = cv2.approxPolyDP(contour, epsilon, True)
+                
+                # Se il poligono ha 4 lati, restituisci i suoi angoli
+                if len(approx) == 4:
+                    corners = [(point[0][0], point[0][1]) for point in approx]
+                    print(f"Angoli rilevati per l'immagine {corners}")
+                    for corner in corners:
+                        cv2.circle(colored_image, corner, radius=10, color=(0, 0, 255), thickness=-1)  # Cerchio rosso per ogni angolo
 
     return colored_image
+
+def find_polygon_corners(image, min_area=500, epsilon_factor=0.02):
+    """
+    Trova i 4 angoli del poligono nell'immagine.
+    
+    Args:
+        image (numpy.ndarray): Immagine binaria (0 e 255).
+        min_area (int): Area minima per considerare un contorno.
+        epsilon_factor (float): Fattore per approssimare il contorno.
+
+    Returns:
+        List[Tuple[int, int]]: Lista dei 4 angoli trovati (x, y).
+    """
+    # Trova i contorni nell'immagine
+    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for contour in contours:
+        # Filtra per area
+        area = cv2.contourArea(contour)
+        if area < min_area:
+            continue
+        
+        # Approssima il contorno a un poligono
+        epsilon = epsilon_factor * cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, epsilon, True)
+        
+        # Se il poligono ha 4 lati, restituisci i suoi angoli
+        if len(approx) == 4:
+            corners = [(point[0][0], point[0][1]) for point in approx]
+            return corners
+
+    # Nessun poligono con 4 angoli trovato
+    return []
+
+def draw_polygon_corners(image, corners):
+    """
+    Disegna i 4 angoli su un'immagine.
+    
+    Args:
+        image (numpy.ndarray): Immagine originale.
+        corners (List[Tuple[int, int]]): Lista dei 4 angoli (x, y).
+    
+    Returns:
+        numpy.ndarray: Immagine con i punti angolari disegnati.
+    """
+    for corner in corners:
+        cv2.circle(image, corner, radius=10, color=(0, 0, 255), thickness=-1)  # Cerchio rosso per ogni angolo
+
+    return image
 
 def process_image(imageURL):
     image_opened = preprocess_image(imageURL)  # Pre-processing dell'immagine
@@ -134,6 +196,10 @@ imageURLAlto = "./Federico/img/parcheggioAlto.jpg"
 imageURL2 = "./Federico/img/parcheggio3.jpg"
 ImageURLNew = "./RL/guida/output3/4725.png"
 ImageURLNew2 = "./RL/guida/output3/4700.png"
+ImageURLNew3 = "./RL/guida/output3/4790.png"
+ImageURLNew4 = "./RL/guida/output3/4800.png"
 
 process_image(ImageURLNew)
 process_image(ImageURLNew2)
+process_image(ImageURLNew3)
+process_image(ImageURLNew4)
