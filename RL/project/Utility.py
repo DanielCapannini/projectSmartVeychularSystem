@@ -38,12 +38,12 @@ def control_retro(vehicle, midpoint, control, target_speed_mps=10/3.6):
         control.steer = -((midpoint[0] / 400) - 1)
         current_velocity = vehicle.get_velocity()
         current_speed_mps = current_velocity.length()
-        control = controllo_velocita(control, target_speed_mps, current_speed_mps)
+        control = speed_control(control, target_speed_mps, current_speed_mps)
         vehicle.apply_control(control)
         time.sleep(0.1)
         return False
 
-def controllo_velocita(control, target_speed_mps, current_speed_mps):
+def speed_control(control, target_speed_mps, current_speed_mps):
     speed_error = target_speed_mps - current_speed_mps
     if speed_error > 0:
         control.throttle = min(1.0, 0.5 + speed_error * 0.5) 
@@ -56,7 +56,7 @@ def controllo_velocita(control, target_speed_mps, current_speed_mps):
         control.brake = 0.0
     return control
 
-def riconosci_parcheggio(image):
+def recognize_parking(image):
     template_height, template_width = template.shape
     scales = np.linspace(0.5, 1.5, 10)[::-1]
     max_val = -1
@@ -86,13 +86,10 @@ def find_point(img):
         area = cv2.contourArea(contour)
         x, y, w, h = cv2.boundingRect(contour)
         if x > 0 and y > 0 and (x + w) < width and (y + h) < height:
-            if area > 1000: 
+            if area > 1500: 
                 print(area)
                 cv2.drawContours(colored_image, [contour], -1, (0,0,255), thickness=cv2.FILLED)
-    hsv_image = cv2.cvtColor(colored_image, cv2.COLOR_BGR2HSV)
-    lower_red = np.array([0, 100, 100])
-    upper_red = np.array([10, 255, 255])
-    mask = cv2.inRange(hsv_image, lower_red, upper_red)
+    mask = cv2.inRange(colored_image, np.array([0, 0, 255]), np.array([0, 0, 255]))
     mask = cv2.Canny(mask,100,200)
     midpoint, _, _ = find_highest_segment_midpoint_and_perpendicular(mask)
     return midpoint
