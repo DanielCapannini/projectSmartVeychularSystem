@@ -133,11 +133,12 @@ def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500, epsilon_f
                     for corner in corners:
                         cv2.circle(colored_image, corner, radius=10, color=(0, 0, 255), thickness=-1)  # Cerchio rosso
                         
-                    #center = find_center_of_polygon(corners)
-                    #cv2.circle(colored_image, center, radius=10, color=(0, 255, 255), thickness=-1)
+                    center = find_center_of_polygon(corners)
+                    center = (int(center[0]), int(center[1]))
+                    cv2.circle(colored_image, center, radius=10, color=(0, 255, 255), thickness=-1)
 
     # Ritorna l'immagine, il booleano e la lista dei poligoni trovati
-    return colored_image, len(found_polygons) > 0, found_polygons
+    return colored_image, len(found_polygons) > 0, center
 
 def find_center_of_polygon(corners):
     # Assumiamo che `corners` sia una lista di tuple con 4 punti, ad esempio [(x1, y1), (x2, y2), (x3, y3), (x4, y4)]
@@ -156,10 +157,10 @@ def process_image(imageURL, i):
     # Preprocessing dell'immagine
     image_opened = preprocess_image(imageURL)  # Pre-processing dell'immagine
     image_with_lines = draw_horizontal_line(image_opened)  # Rilevamento delle linee
-    image_parking_found, parking_exist, corners = color_enclosed_black_areas(image_with_lines)
+    image_parking_found, parking_exist, center = color_enclosed_black_areas(image_with_lines)
 
     if parking_exist:
-        print(f"Angoli rilevati per l'immagine: {corners}")
+        print(f"Centro rilevato per il parcheggio: {center}")
 
     # Mostra l'immagine con la linea
     #cv2.imshow("Image with Horizontal Lines", image_parking_found)
@@ -171,7 +172,7 @@ def process_image(imageURL, i):
     #image_parking_found.save_to_disk(f'output/{unique_filename.frame}.png')
     cv2.imwrite(unique_filename, image_parking_found)
 
-    return parking_exist, corners
+    return parking_exist, center
 
 """
 # Esegui la funzione per le immagini
