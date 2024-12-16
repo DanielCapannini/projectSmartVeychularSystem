@@ -86,7 +86,7 @@ def find_point(img):
         area = cv2.contourArea(contour)
         x, y, w, h = cv2.boundingRect(contour)
         if x > 0 and y > 0 and (x + w) < width and (y + h) < height:
-            if area > 1000: 
+            if area > 1500: 
                 print(area)
                 cv2.drawContours(colored_image, [contour], -1, (0,0,255), thickness=cv2.FILLED)
     hsv_image = cv2.cvtColor(colored_image, cv2.COLOR_BGR2HSV)
