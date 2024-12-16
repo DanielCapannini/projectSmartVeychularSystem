@@ -132,60 +132,23 @@ def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500, epsilon_f
                     # Disegna i vertici sull'immagine
                     for corner in corners:
                         cv2.circle(colored_image, corner, radius=10, color=(0, 0, 255), thickness=-1)  # Cerchio rosso
+                        
+                    #center = find_center_of_polygon(corners)
+                    #cv2.circle(colored_image, center, radius=10, color=(0, 255, 255), thickness=-1)
 
     # Ritorna l'immagine, il booleano e la lista dei poligoni trovati
     return colored_image, len(found_polygons) > 0, found_polygons
 
-def find_polygon_corners(image, min_area=500, epsilon_factor=0.02):
-    """
-    Trova i 4 angoli del poligono nell'immagine.
+def find_center_of_polygon(corners):
+    # Assumiamo che `corners` sia una lista di tuple con 4 punti, ad esempio [(x1, y1), (x2, y2), (x3, y3), (x4, y4)]
     
-    Args:
-        image (numpy.ndarray): Immagine binaria (0 e 255).
-        min_area (int): Area minima per considerare un contorno.
-        epsilon_factor (float): Fattore per approssimare il contorno.
-
-    Returns:
-        List[Tuple[int, int]]: Lista dei 4 angoli trovati (x, y).
-    """
-    # Trova i contorni nell'immagine
-    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    for contour in contours:
-        # Filtra per area
-        area = cv2.contourArea(contour)
-        if area < min_area:
-            continue
-        
-        # Approssima il contorno a un poligono
-        epsilon = epsilon_factor * cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, epsilon, True)
-        
-        # Se il poligono ha 4 lati, restituisci i suoi angoli
-        if len(approx) == 4:
-            corners = [(point[0][0], point[0][1]) for point in approx]
-            return corners
-
-    # Nessun poligono con 4 angoli trovato
-    return []
-
-def draw_polygon_corners(image, corners):
-    """
-    Disegna i 4 angoli su un'immagine.
+    # Calcola la media delle coordinate x e y
+    center_x = sum([corner[0] for corner in corners]) / len(corners)
+    center_y = sum([corner[1] for corner in corners]) / len(corners)
     
-    Args:
-        image (numpy.ndarray): Immagine originale.
-        corners (List[Tuple[int, int]]): Lista dei 4 angoli (x, y).
-    
-    Returns:
-        numpy.ndarray: Immagine con i punti angolari disegnati.
-    """
-    for corner in corners:
-        cv2.circle(image, corner, radius=10, color=(0, 0, 255), thickness=-1)  # Cerchio rosso per ogni angolo
+    return (center_x, center_y)
 
-    return image
-
-def process_image(imageURL):
+def process_image(imageURL, i):
     # Assicurati che la cartella 'output' esista
     output_dir = "./Federico/project/output"
     os.makedirs(output_dir, exist_ok=True)  # Crea la cartella se non esiste
@@ -204,8 +167,9 @@ def process_image(imageURL):
     #cv2.destroyAllWindows()
 
     # Salva l'immagine risultante nella cartella 'output'
-    #unique_filename = f"image_{uuid.uuid4().hex}.png"    
+    unique_filename = f"./output/image_" + str(i) + ".png"    
     #image_parking_found.save_to_disk(f'output/{unique_filename.frame}.png')
+    cv2.imwrite(unique_filename, image_parking_found)
 
     return parking_exist, corners
 
