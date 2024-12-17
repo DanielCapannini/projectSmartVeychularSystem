@@ -137,7 +137,10 @@ def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500, epsilon_f
                     center = (int(center[0]), int(center[1]))
                     cv2.circle(colored_image, center, radius=10, color=(0, 255, 255), thickness=-1)
 
-    # Ritorna l'immagine, il booleano e la lista dei poligoni trovati
+    # Ritorna l'immagine, il booleano e il centro trovato
+    center = (int(center[0]) - (width/2), int(center[1]))
+    #se vanno specchiate le coordinate
+    # center = (-int(center[0]), int(center[1]))
     return colored_image, len(found_polygons) > 0, center
 
 def find_center_of_polygon(corners):
