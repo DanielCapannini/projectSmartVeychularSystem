@@ -108,7 +108,7 @@ def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500, epsilon_f
 
     # Ottieni le dimensioni dell'immagine
     height, width = image.shape
-
+    center = None
     # Filtra i contorni per area minima e quelli che non toccano i bordi
     for contour in contours:
         area = cv2.contourArea(contour)
@@ -138,7 +138,7 @@ def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500, epsilon_f
                     cv2.circle(colored_image, center, radius=10, color=(0, 255, 255), thickness=-1)
 
     # Ritorna l'immagine, il booleano e il centro trovato
-    center = (int(center[0]) - (width/2), int(center[1]))
+                    center = (int(center[0]) - (width/2), int(center[1]))
     #se vanno specchiate le coordinate
     # center = (-int(center[0]), int(center[1]))
     return colored_image, len(found_polygons) > 0, center
@@ -154,8 +154,8 @@ def find_center_of_polygon(corners):
 
 def process_image(imageURL, i):
     # Assicurati che la cartella 'output' esista
-    output_dir = "./Federico/project/output"
-    os.makedirs(output_dir, exist_ok=True)  # Crea la cartella se non esiste
+    #output_dir = "./Federico/project/output"
+    #os.makedirs(output_dir, exist_ok=True)  # Crea la cartella se non esiste
 
     # Preprocessing dell'immagine
     image_opened = preprocess_image(imageURL)  # Pre-processing dell'immagine
@@ -171,9 +171,9 @@ def process_image(imageURL, i):
     #cv2.destroyAllWindows()
 
     # Salva l'immagine risultante nella cartella 'output'
-    unique_filename = f"./output/image_" + str(i) + ".png"    
+    #unique_filename = f"./output/image_" + str(i) + ".png"    
     #image_parking_found.save_to_disk(f'output/{unique_filename.frame}.png')
-    cv2.imwrite(unique_filename, image_parking_found)
+    #cv2.imwrite(unique_filename, image_parking_found)
 
     return parking_exist, center
 
