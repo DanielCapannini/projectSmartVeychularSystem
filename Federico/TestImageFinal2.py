@@ -206,9 +206,11 @@ def draw_line_at_angle(image, angle_radians):
     start_y = lowerY
     end_x = int(start_y + L * math.cos(angle_radians))
     end_y = int(lowerY - L * math.sin(angle_radians))
+    end_x_neg = int(start_x - L * math.cos(angle_radians))
+    end_y_neg = int(start_y + L * math.sin(angle_radians))
     
     # Disegna la linea inclinata
-    cv2.line(image_with_line, (start_x, start_y), (end_x, end_y), (255, 255, 255), thickness=30)  # Linea bianca spessa
+    cv2.line(image_with_line, (end_x_neg, end_y_neg), (end_x, end_y), (255, 255, 255), thickness=30)  # Linea bianca spessa
 
     return image_with_line
 
@@ -288,9 +290,10 @@ def process_image(imageURL, i=0):
 
     # Preprocessing dell'immagine
     image_opened = preprocess_image(imageURL)  # Pre-processing dell'immagine
-    angle_radians = -(find_and_draw_longest_white_line(image_opened))
+    angle_radians = (find_and_draw_longest_white_line(image_opened))
     print(f"Angolo trovato: {angle_radians}")
     image_with_lines = draw_line_at_angle(image_opened, angle_radians)  # Rilevamento delle linee
+    #image_with_lines = draw_line_at_angle(image_with_lines, -angle_radians)
     image_parking_found, parking_exist, center = color_enclosed_black_areas(image_with_lines)
 
     if parking_exist:
