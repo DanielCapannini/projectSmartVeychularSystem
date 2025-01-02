@@ -37,7 +37,7 @@ def preprocess_image(image):
 
     return image_opened
 
-def calcolo_angolo(image):
+def angle_calculation(image):
     edges = cv2.Canny(image, 50, 150)
     lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=100)
     min_angle = 75
