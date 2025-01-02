@@ -141,3 +141,36 @@ def find_highest_segment_midpoint_and_perpendicular(mask):
         perp_start = (midpoint[0] - dx, midpoint[1] - dy)
         perp_end = (midpoint[0] + dx, midpoint[1] + dy)
     return midpoint, perp_start, perp_end
+
+def angle_calculation(image):
+    edges = cv2.Canny(image, 50, 150)
+    lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=100)
+    min_angle = 75
+    max_angle = 105
+    min_angle_rad = np.deg2rad(min_angle)
+    max_angle_rad = np.deg2rad(max_angle)
+    theta_sum = 0
+    line_count = 0
+    for line in lines:
+        rho, theta = line[0]
+        if min_angle_rad <= theta <= max_angle_rad:
+            theta_sum += theta
+            line_count += 1
+    if  line_count > 0:
+        theta_mean = theta_sum / line_count
+        theta_mean_deg = np.rad2deg(theta_mean) 
+        if theta_mean_deg > 90:
+            return theta_mean_deg+5
+        if theta_mean_deg < 90:
+            return theta_mean_deg-2
+        return theta_mean_deg 
+    return None
+
+def keep_lane(image, control, current_speed_mps, target_speed_mps):
+    angolo = angle_calculation(image)
+    control.steer = 0.0
+    if angolo != None:
+        valore_scalato = (((angolo - 75) / (105 - 75)) * 0.8) - 0.4
+        control.steer = valore_scalato
+    control = speed_control(control, target_speed_mps, current_speed_mps)
+    return control
