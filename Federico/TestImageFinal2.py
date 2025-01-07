@@ -154,6 +154,10 @@ def find_and_draw_longest_white_line(binary_image):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+
+    print(f"Angolo pre-aggiustamento: {angle_radians}")
+    angle_radians = -(angle_radians) + (angle_radians*0.015) 
+
     return angle_radians
 
 def draw_line_at_angle(image, angle_radians):
@@ -201,6 +205,9 @@ def draw_line_at_angle(image, angle_radians):
                 break  # Fermati quando trovi il primo pixel bianco per colonna
 
     # Calcola i punti della linea inclinata
+    if abs(angle_radians) >= 0.5:
+        lowerY = lowerY - 20
+
     L=width
     start_x = xPoint
     start_y = lowerY
@@ -311,14 +318,15 @@ def process_image(imageURL, i=0):
 
     return parking_exist, center
 
-ImageURLNew = "./RL/project/output/312363.png"
+ImageURLNew = "./RL/project/output/312378.png"
 image = cv2.imread(ImageURLNew)
-ImageURLNew2 = "./RL/project/output/312198.png"
+ImageURLNew2 = "./RL/project/output/312257.png"
 image2 = cv2.imread(ImageURLNew2)
-ImageURLNew3 = "./RL/project/output/312623.png"
+ImageURLNew3 = "./RL/project/output/312304.png"
 image3 = cv2.imread(ImageURLNew3)
 ImageURLNew4 = "./RL/guida/output3/4415.png"
 image4 = cv2.imread(ImageURLNew4)
+
 
 process_image(image)
 process_image(image2)
