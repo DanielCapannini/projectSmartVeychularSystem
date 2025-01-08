@@ -221,6 +221,80 @@ def draw_line_at_angle(image, angle_radians):
 
     return image_with_line
 
+def draw_line_at_angle_to_two_points(image, angle_radians):
+    """
+    Trova il punto più basso di un pixel bianco in ogni colonna e disegna una linea inclinata
+    di un angolo specifico rispetto all'orizzontale a partire da quel punto.
+
+    Args:
+        image (numpy.ndarray): Immagine binaria (0 e 255).
+        angle (float): Angolo della linea in gradi (0 = orizzontale).
+
+    Returns:
+        numpy.ndarray: Immagine con la linea inclinata disegnata.
+    """
+    # Crea una copia dell'immagine per disegnare la linea
+    image_with_line = image.copy()
+
+    # Ottieni le dimensioni dell'immagine
+    height, width = image.shape
+
+    # Trova i contorni nell'immagine
+    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Calcola l'area di ogni contorno e memorizza quelli abbastanza grandi
+    large_contours = []
+    min_contour_area = 100  # Modifica questa soglia in base alle tue esigenze
+    for contour in contours:
+        if cv2.contourArea(contour) > min_contour_area:
+            large_contours.append(contour)
+
+    # Scorri ogni colonna per trovare il pixel bianco più basso
+    lowerY = 0
+    xPoint = 0
+    lowerY2 = 0
+    xPoint2 = 0
+    minDistance = 200
+    for x in range(width):
+        for y in range(height - 1, -1, -1):
+            if image[y, x] == 255:  # Trova il primo pixel bianco più basso
+                # Verifica se il pixel fa parte di un contorno abbastanza grande
+                for contour in large_contours:
+                    if cv2.pointPolygonTest(contour, (x, y), False) >= 0:  # Il punto (x, y) è dentro il contorno
+                        if lowerY < y or lowerY == y:
+                            if (lowerY2 < y or lowerY2 == y) and (x > xPoint + minDistance or x < xPoint - minDistance):
+                                lowerY2 = lowerY
+                                xPoint2 = xPoint
+                            lowerY = y
+                            xPoint = x
+                        elif lowerY2 < y or lowerY2 == y:
+                            if x > xPoint + minDistance or x < xPoint - minDistance:
+                                lowerY2 = y
+                                xPoint2 = x
+
+                        break  # Fermati appena trovi il contorno valido
+
+                break  # Fermati quando trovi il primo pixel bianco per colonna
+
+    # Calcola i punti della linea inclinata
+    if abs(angle_radians) >= 0.5:
+        lowerY = lowerY - 20
+
+    L=width
+    start_x = xPoint
+    start_y = lowerY
+
+    end_x = int(start_y + L * math.cos(angle_radians))
+    end_y = int(lowerY - L * math.sin(angle_radians))
+    end_x_neg = int(start_x - L * math.cos(angle_radians))
+    end_y_neg = int(start_y + L * math.sin(angle_radians))
+    
+    # Disegna la linea inclinata
+    #cv2.line(image_with_line, (end_x_neg, end_y_neg), (end_x, end_y), (255, 255, 255), thickness=30)  # Linea bianca spessa
+    cv2.line(image_with_line, (start_x, start_y), (xPoint2, lowerY2), (255, 255, 255), thickness=30)
+
+    return image_with_line
+
 def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500, epsilon_factor=0.02):
     """
     Trova le aree nere chiuse delimitate da righe bianche, le colora e identifica i poligoni con 4 lati.
@@ -300,6 +374,7 @@ def process_image(imageURL, i=0):
     angle_radians = (find_and_draw_longest_white_line(image_opened))
     print(f"Angolo trovato: {angle_radians}")
     image_with_lines = draw_line_at_angle(image_opened, angle_radians)  # Rilevamento delle linee
+    image_with_lines = draw_line_at_angle_to_two_points(image_opened, angle_radians)
     #image_with_lines = draw_line_at_angle(image_with_lines, -angle_radians)
     image_parking_found, parking_exist, center = color_enclosed_black_areas(image_with_lines)
 
@@ -320,7 +395,7 @@ def process_image(imageURL, i=0):
 
 ImageURLNew = "./RL/project/output/312378.png"
 image = cv2.imread(ImageURLNew)
-ImageURLNew2 = "./RL/project/output/312257.png"
+ImageURLNew2 = "./RL/project/output/312379.png"
 image2 = cv2.imread(ImageURLNew2)
 ImageURLNew3 = "./RL/project/output/312304.png"
 image3 = cv2.imread(ImageURLNew3)
