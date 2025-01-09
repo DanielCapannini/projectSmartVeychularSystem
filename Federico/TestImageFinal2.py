@@ -221,6 +221,7 @@ def draw_line_at_angle(image, angle_radians):
 
     return image_with_line
 
+
 def draw_line_at_angle_to_two_points(image, angle_radians):
     """
     Trova il punto più basso di un pixel bianco in ogni colonna e disegna una linea inclinata
@@ -256,7 +257,7 @@ def draw_line_at_angle_to_two_points(image, angle_radians):
     xPoint2 = 0
     minDistance = 200
     for x in range(width):
-        for y in range(height - 1, -1, -1):
+        for y in range(100, height - 1):
             if image[y, x] == 255:  # Trova il primo pixel bianco più basso
                 # Verifica se il pixel fa parte di un contorno abbastanza grande
                 for contour in large_contours:
@@ -294,6 +295,78 @@ def draw_line_at_angle_to_two_points(image, angle_radians):
     cv2.line(image_with_line, (start_x, start_y), (xPoint2, lowerY2), (255, 255, 255), thickness=30)
 
     return image_with_line
+
+
+def find_two_lowest_points(image, min_contour_area=500, min_distance=10):
+    """
+    Trova i due punti più bassi separati in base all'immagine binaria e disegna una linea tra di loro.
+    
+    Args:
+        image (numpy.ndarray): Immagine binaria (0 e 255).
+        min_contour_area (int): Area minima per considerare un contorno.
+        min_distance (int): Distanza minima tra i due punti più bassi.
+
+    Returns:
+        tuple: (image_with_line, lowest_points), dove image_with_line è l'immagine con la linea disegnata,
+               e lowest_points è la lista dei due punti più bassi trovati.
+    """
+    # Crea una copia dell'immagine
+    image_with_line = image.copy()
+
+    # Trova i contorni nell'immagine
+    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Filtra i contorni abbastanza grandi
+    large_contours = [contour for contour in contours if cv2.contourArea(contour) > min_contour_area]
+
+    # Crea una maschera binaria per i contorni rilevanti
+    mask = np.zeros_like(image)
+    cv2.drawContours(mask, large_contours, -1, 255, thickness=cv2.FILLED)
+
+    # Trova i punti più bassi all'interno dei bounding box dei contorni
+    lowest_points = []
+    for contour in large_contours:
+        x, y, w, h = cv2.boundingRect(contour)  # Bounding box
+        roi = mask[y:y + h, x:x + w]  # Area di interesse nella maschera
+        roi_image = image[y:y + h, x:x + w]  # Area di interesse nell'immagine originale
+
+        # Trova i pixel bianchi nella ROI
+        white_pixels = np.argwhere(roi_image == 255)
+
+        if white_pixels.size > 0:
+            # Aggiungi l'offset del bounding box per ottenere le coordinate globali
+            white_pixels[:, 0] += y  # Righe
+            white_pixels[:, 1] += x  # Colonne
+            
+            # Ordina i pixel per altezza (y decrescente)
+            white_pixels = white_pixels[np.argsort(-white_pixels[:, 0])]
+
+            # Prendi il pixel più basso
+            lowest_points.append(tuple(white_pixels[0]))
+
+    if len(lowest_points) < 2:
+        raise ValueError("Non sono stati trovati almeno due punti abbastanza bassi separati.")
+
+    # Trova i due punti più bassi separati da almeno `min_distance`
+    lowest_points = sorted(lowest_points, key=lambda p: p[1])  # Ordina per x
+    point1, point2 = None, None
+
+    for i, (x1, y1) in enumerate(lowest_points):
+        for x2, y2 in lowest_points[i + 1:]:
+            if abs(x2 - x1) >= min_distance:
+                point1, point2 = (x1, y1), (x2, y2)
+                break
+        if point1 and point2:
+            break
+
+    if not point1 or not point2:
+        raise ValueError("Non sono stati trovati due punti separati dalla distanza minima.")
+
+    # Disegna la linea tra i due punti
+    cv2.line(image_with_line, point1, point2, (255, 255, 255), thickness=2)
+
+    return image_with_line
+
 
 def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500, epsilon_factor=0.02):
     """
