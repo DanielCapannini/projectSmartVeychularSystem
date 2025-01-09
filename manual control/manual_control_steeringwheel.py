@@ -94,6 +94,8 @@ try:
     from pygame.locals import K_r
     from pygame.locals import K_s
     from pygame.locals import K_w
+    from pygame.locals import K_Z
+
 except ImportError:
     raise RuntimeError('cannot import pygame, make sure pygame package is installed')
 
@@ -171,6 +173,9 @@ class World(object):
         self.camera_manager.set_sensor(cam_index, notify=False)
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
+
+    def parking_asistent(self): #funzione del parkeggio
+        parking(self.player, self.world)
 
     def next_weather(self, reverse=False):
         self._weather_index += -1 if reverse else 1
@@ -262,6 +267,8 @@ class DualControl(object):
             elif event.type == pygame.KEYUP:
                 if self._is_quit_shortcut(event.key):
                     return True
+                elif event.key == K_Z:      #parcheggio
+                    world.parking_asistent()
                 elif event.key == K_BACKSPACE:
                     world.restart()
                 elif event.key == K_F1:
