@@ -8,10 +8,16 @@ template = cv2.imread('template.png', cv2.IMREAD_GRAYSCALE)
 
 def preprocess_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, binary_mask = cv2.threshold(gray_image, 200, 255, cv2.THRESH_BINARY)
-    kernel = np.ones((5, 5), np.uint8)
-    mask_cleaned = cv2.morphologyEx(binary_mask, cv2.MORPH_CLOSE, kernel)
-    return mask_cleaned
+    adaptive_thresh = cv2.adaptiveThreshold(gray_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                           cv2.THRESH_BINARY, 11, 2)
+    kernel = np.ones((3, 11), np.uint8)
+    opened_mask = cv2.morphologyEx(adaptive_thresh, cv2.MORPH_OPEN, kernel)
+    contours, _ = cv2.findContours(opened_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    final_mask = np.zeros_like(opened_mask)
+    for contour in contours:
+        if cv2.contourArea(contour) >= 1000:
+            cv2.drawContours(final_mask, [contour], -1, (255), thickness=cv2.FILLED)
+    return final_mask
 
 def spawn_vehicle(world, vehicle_index=0, pattern='vehicle.*'):
     blueprint_library = world.get_blueprint_library()
