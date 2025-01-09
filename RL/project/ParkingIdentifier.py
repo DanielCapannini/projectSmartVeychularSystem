@@ -86,7 +86,7 @@ def find_and_draw_longest_white_line(binary_image):
         angle_radians = np.arctan2(y2 - y1, x2 - x1)
 
 
-    print(f"Angolo pre-aggiustamento: {angle_radians}")
+    #print(f"Angolo pre-aggiustamento: {angle_radians}")
     angle_radians = -(angle_radians) + (angle_radians*0.015) 
 
     return angle_radians
@@ -241,14 +241,14 @@ def process_image(imageURL, i=0):
     # Preprocessing dell'immagine
     image_opened = preprocess_image(imageURL)  # Pre-processing dell'immagine
     angle_radians = (find_and_draw_longest_white_line(image_opened))
-    print(f"Angolo trovato: {angle_radians}")
+    #print(f"Angolo trovato: {angle_radians}")
     #image_with_lines = draw_line_at_angle(image_opened, angle_radians)  # Rilevamento delle linee
     image_with_lines = draw_line_at_angle_to_two_points(image_opened, angle_radians)
     #image_with_lines = draw_line_at_angle(image_with_lines, -angle_radians)
     image_parking_found, parking_exist, center = color_enclosed_black_areas(image_with_lines)
 
-    if parking_exist:
-        print(f"Centro rilevato per il parcheggio: {center}")
+    #if parking_exist:
+    #    print(f"Centro rilevato per il parcheggio: {center}")
 
     # Mostra l'immagine con la linea
     #cv2.imshow("Image with Horizontal Lines", image_parking_found)
