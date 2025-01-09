@@ -37,70 +37,6 @@ def preprocess_image(image):
 
     return image_opened
 
-def angle_calculation(image):
-    edges = cv2.Canny(image, 50, 150)
-    lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=100)
-    min_angle = 75
-    max_angle = 105
-    min_angle_rad = np.deg2rad(min_angle)
-    max_angle_rad = np.deg2rad(max_angle)
-    theta_sum = 0
-    line_count = 0
-    for line in lines:
-        rho, theta = line[0]
-        if min_angle_rad <= theta <= max_angle_rad:
-            theta_sum += theta
-            line_count += 1
-    theta_mean = theta_sum / line_count
-    theta_mean_deg = np.rad2deg(theta_mean) 
-    if theta_mean_deg > 100:
-        return theta_mean_deg+5
-    return abs(theta_mean_deg - 80)
-
-def calculate_image_angle(image):
-
-    # Rileva i bordi con Canny
-    edges = cv2.Canny(image, 50, 150, apertureSize=3)
-
-    # Trova le linee usando la trasformata di Hough
-    lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
-
-    # Calcola gli angoli medi
-    angles = []
-    if lines is not None:
-        for rho, theta in lines[:, 0]:
-            print(f"angolo rilevato: {np.degrees(theta)}")
-            if np.degrees(theta) > 75:
-                angle = np.degrees(theta) - 90  # Converti l'angolo in gradi rispetto all'orizzontale
-                angles.append(angle)
-
-    # Calcola l'angolo medio
-    if angles:
-        average_angle = np.mean(angles)
-    else:
-        average_angle = 0
-
-    return average_angle
-
-def calculate_orientation(image):
-    # Carica l'immagine in scala di grigi
-    #image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-
-    # Applica threshold per ottenere un'immagine binaria
-    _, binary = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY)
-
-    # Trova i contorni
-    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Trova l'inclinazione maggiore (approssimando un'ellisse)
-    for contour in contours:
-        if len(contour) >= 5:  # L'ellisse richiede almeno 5 punti
-            ellipse = cv2.fitEllipse(contour)
-            angle = ellipse[2]  # Angolo in gradi
-            return angle
-
-    return 0  # Nessun contorno trovato
-
 def find_and_draw_longest_white_line(binary_image):
     """
     Trova e disegna la linea bianca più lunga in un'immagine binaria, indipendentemente dall'inclinazione.
@@ -111,7 +47,6 @@ def find_and_draw_longest_white_line(binary_image):
     Returns:
         numpy.ndarray: Immagine con la linea più lunga disegnata.
     """
-
 
     # Crea una copia dell'immagine per disegnare la linea
     image_with_line = cv2.cvtColor(binary_image.copy(), cv2.COLOR_GRAY2BGR)
@@ -160,68 +95,6 @@ def find_and_draw_longest_white_line(binary_image):
 
     return angle_radians
 
-def draw_line_at_angle(image, angle_radians):
-    """
-    Trova il punto più basso di un pixel bianco in ogni colonna e disegna una linea inclinata
-    di un angolo specifico rispetto all'orizzontale a partire da quel punto.
-
-    Args:
-        image (numpy.ndarray): Immagine binaria (0 e 255).
-        angle (float): Angolo della linea in gradi (0 = orizzontale).
-
-    Returns:
-        numpy.ndarray: Immagine con la linea inclinata disegnata.
-    """
-    # Crea una copia dell'immagine per disegnare la linea
-    image_with_line = image.copy()
-
-    # Ottieni le dimensioni dell'immagine
-    height, width = image.shape
-
-    # Trova i contorni nell'immagine
-    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Calcola l'area di ogni contorno e memorizza quelli abbastanza grandi
-    large_contours = []
-    min_contour_area = 500  # Modifica questa soglia in base alle tue esigenze
-    for contour in contours:
-        if cv2.contourArea(contour) > min_contour_area:
-            large_contours.append(contour)
-
-    # Scorri ogni colonna per trovare il pixel bianco più basso
-    lowerY = 0
-    xPoint = 0
-    for x in range(width):
-        for y in range(height - 1, -1, -1):
-            if image[y, x] == 255:  # Trova il primo pixel bianco più basso
-                # Verifica se il pixel fa parte di un contorno abbastanza grande
-                for contour in large_contours:
-                    if cv2.pointPolygonTest(contour, (x, y), False) >= 0:  # Il punto (x, y) è dentro il contorno
-                        if lowerY < y:
-                            lowerY = y
-                            xPoint = x
-                        break  # Fermati appena trovi il contorno valido
-
-                break  # Fermati quando trovi il primo pixel bianco per colonna
-
-    # Calcola i punti della linea inclinata
-    if abs(angle_radians) >= 0.5:
-        lowerY = lowerY - 20
-
-    L=width
-    start_x = xPoint
-    start_y = lowerY
-    end_x = int(start_y + L * math.cos(angle_radians))
-    end_y = int(lowerY - L * math.sin(angle_radians))
-    end_x_neg = int(start_x - L * math.cos(angle_radians))
-    end_y_neg = int(start_y + L * math.sin(angle_radians))
-    
-    # Disegna la linea inclinata
-    cv2.line(image_with_line, (end_x_neg, end_y_neg), (end_x, end_y), (255, 255, 255), thickness=30)  # Linea bianca spessa
-
-    return image_with_line
-
-
 def draw_line_at_angle_to_two_points(image, angle_radians):
     """
     Trova il punto più basso di un pixel bianco in ogni colonna e disegna una linea inclinata
@@ -257,7 +130,7 @@ def draw_line_at_angle_to_two_points(image, angle_radians):
     xPoint2 = 0
     minDistance = 200
     for x in range(width):
-        for y in range(100, height - 1):
+        for y in range(height - 1, 300, -1):
             if image[y, x] == 255:  # Trova il primo pixel bianco più basso
                 # Verifica se il pixel fa parte di un contorno abbastanza grande
                 for contour in large_contours:
@@ -272,7 +145,6 @@ def draw_line_at_angle_to_two_points(image, angle_radians):
                             if x > xPoint + minDistance or x < xPoint - minDistance:
                                 lowerY2 = y
                                 xPoint2 = x
-
                         break  # Fermati appena trovi il contorno valido
 
                 break  # Fermati quando trovi il primo pixel bianco per colonna
@@ -295,78 +167,6 @@ def draw_line_at_angle_to_two_points(image, angle_radians):
     cv2.line(image_with_line, (start_x, start_y), (xPoint2, lowerY2), (255, 255, 255), thickness=30)
 
     return image_with_line
-
-
-def find_two_lowest_points(image, min_contour_area=500, min_distance=10):
-    """
-    Trova i due punti più bassi separati in base all'immagine binaria e disegna una linea tra di loro.
-    
-    Args:
-        image (numpy.ndarray): Immagine binaria (0 e 255).
-        min_contour_area (int): Area minima per considerare un contorno.
-        min_distance (int): Distanza minima tra i due punti più bassi.
-
-    Returns:
-        tuple: (image_with_line, lowest_points), dove image_with_line è l'immagine con la linea disegnata,
-               e lowest_points è la lista dei due punti più bassi trovati.
-    """
-    # Crea una copia dell'immagine
-    image_with_line = image.copy()
-
-    # Trova i contorni nell'immagine
-    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Filtra i contorni abbastanza grandi
-    large_contours = [contour for contour in contours if cv2.contourArea(contour) > min_contour_area]
-
-    # Crea una maschera binaria per i contorni rilevanti
-    mask = np.zeros_like(image)
-    cv2.drawContours(mask, large_contours, -1, 255, thickness=cv2.FILLED)
-
-    # Trova i punti più bassi all'interno dei bounding box dei contorni
-    lowest_points = []
-    for contour in large_contours:
-        x, y, w, h = cv2.boundingRect(contour)  # Bounding box
-        roi = mask[y:y + h, x:x + w]  # Area di interesse nella maschera
-        roi_image = image[y:y + h, x:x + w]  # Area di interesse nell'immagine originale
-
-        # Trova i pixel bianchi nella ROI
-        white_pixels = np.argwhere(roi_image == 255)
-
-        if white_pixels.size > 0:
-            # Aggiungi l'offset del bounding box per ottenere le coordinate globali
-            white_pixels[:, 0] += y  # Righe
-            white_pixels[:, 1] += x  # Colonne
-            
-            # Ordina i pixel per altezza (y decrescente)
-            white_pixels = white_pixels[np.argsort(-white_pixels[:, 0])]
-
-            # Prendi il pixel più basso
-            lowest_points.append(tuple(white_pixels[0]))
-
-    if len(lowest_points) < 2:
-        raise ValueError("Non sono stati trovati almeno due punti abbastanza bassi separati.")
-
-    # Trova i due punti più bassi separati da almeno `min_distance`
-    lowest_points = sorted(lowest_points, key=lambda p: p[1])  # Ordina per x
-    point1, point2 = None, None
-
-    for i, (x1, y1) in enumerate(lowest_points):
-        for x2, y2 in lowest_points[i + 1:]:
-            if abs(x2 - x1) >= min_distance:
-                point1, point2 = (x1, y1), (x2, y2)
-                break
-        if point1 and point2:
-            break
-
-    if not point1 or not point2:
-        raise ValueError("Non sono stati trovati due punti separati dalla distanza minima.")
-
-    # Disegna la linea tra i due punti
-    cv2.line(image_with_line, point1, point2, (255, 255, 255), thickness=2)
-
-    return image_with_line
-
 
 def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500, epsilon_factor=0.02):
     """
@@ -446,7 +246,7 @@ def process_image(imageURL, i=0):
     image_opened = preprocess_image(imageURL)  # Pre-processing dell'immagine
     angle_radians = (find_and_draw_longest_white_line(image_opened))
     print(f"Angolo trovato: {angle_radians}")
-    image_with_lines = draw_line_at_angle(image_opened, angle_radians)  # Rilevamento delle linee
+    #image_with_lines = draw_line_at_angle(image_opened, angle_radians)  # Rilevamento delle linee
     image_with_lines = draw_line_at_angle_to_two_points(image_opened, angle_radians)
     #image_with_lines = draw_line_at_angle(image_with_lines, -angle_radians)
     image_parking_found, parking_exist, center = color_enclosed_black_areas(image_with_lines)
