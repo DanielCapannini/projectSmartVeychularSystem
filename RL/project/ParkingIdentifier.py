@@ -98,7 +98,7 @@ def draw_line_at_angle_to_two_points(image, angle_radians):
 
     Args:
         image (numpy.ndarray): Immagine binaria (0 e 255).
-        angle (float): Angolo della linea in gradi (0 = orizzontale).
+        angle_radians (float): Angolo della linea in radianti.
 
     Returns:
         numpy.ndarray: Immagine con la linea inclinata disegnata.
@@ -106,60 +106,46 @@ def draw_line_at_angle_to_two_points(image, angle_radians):
     # Crea una copia dell'immagine per disegnare la linea
     image_with_line = image.copy()
 
-    # Ottieni le dimensioni dell'immagine
-    height, width = image.shape
-
-    # Trova i contorni nell'immagine
+    # Ottieni i contorni validi
     contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    large_contours = [c for c in contours if cv2.contourArea(c) > 100]
 
-    # Calcola l'area di ogni contorno e memorizza quelli abbastanza grandi
-    large_contours = []
-    min_contour_area = 100  # Modifica questa soglia in base alle tue esigenze
-    for contour in contours:
-        if cv2.contourArea(contour) > min_contour_area:
-            large_contours.append(contour)
+    if not large_contours:
+        return image_with_line  # Nessun contorno rilevante trovato
 
-    # Scorri ogni colonna per trovare il pixel bianco più basso
-    lowerY = 0
-    xPoint = 0
-    lowerY2 = 0
-    xPoint2 = 0
-    minDistance = 200
-    for x in range(width):
-        for y in range(height - 1, 300, -1):
-            if image[y, x] == 255:  # Trova il primo pixel bianco più basso
-                # Verifica se il pixel fa parte di un contorno abbastanza grande
-                for contour in large_contours:
-                    if cv2.pointPolygonTest(contour, (x, y), False) >= 0:  # Il punto (x, y) è dentro il contorno
-                        if lowerY < y or lowerY == y:
-                            if (lowerY2 < y or lowerY2 == y) and (x > xPoint + minDistance or x < xPoint - minDistance):
-                                lowerY2 = lowerY
-                                xPoint2 = xPoint
-                            lowerY = y
-                            xPoint = x
-                        elif lowerY2 < y or lowerY2 == y:
-                            if x > xPoint + minDistance or x < xPoint - minDistance:
-                                lowerY2 = y
-                                xPoint2 = x
-                        break  # Fermati appena trovi il contorno valido
+    # Trova i due punti più bassi
+    lowerY, xPoint = -1, -1
+    lowerY2, xPoint2 = -1, -1
+    min_distance = 200
 
-                break  # Fermati quando trovi il primo pixel bianco per colonna
+    for contour in large_contours:
+        for point in contour:
+            x, y = point[0]
+            if y > lowerY or (y == lowerY and abs(x - xPoint) > min_distance):
+                # Aggiorna il secondo punto più basso
+                lowerY2, xPoint2 = lowerY, xPoint
+                # Aggiorna il punto più basso
+                lowerY, xPoint = y, x
+            elif y > lowerY2 and abs(x - xPoint) > min_distance:
+                # Aggiorna solo il secondo punto più basso
+                lowerY2, xPoint2 = y, x
+
+    if lowerY == -1 or lowerY2 == -1:
+        return image_with_line  # Nessun punto trovato
+
+    # Modifica l'altezza per l'angolo
+    if abs(angle_radians) >= 0.5:
+        lowerY -= 20
 
     # Calcola i punti della linea inclinata
-    if abs(angle_radians) >= 0.5:
-        lowerY = lowerY - 20
-
-    L=width
-    start_x = xPoint
-    start_y = lowerY
-
-    end_x = int(start_y + L * math.cos(angle_radians))
-    end_y = int(lowerY - L * math.sin(angle_radians))
+    L = image.shape[1]
+    start_x, start_y = xPoint, lowerY
+    end_x = int(start_x + L * math.cos(angle_radians))
+    end_y = int(start_y - L * math.sin(angle_radians))
     end_x_neg = int(start_x - L * math.cos(angle_radians))
     end_y_neg = int(start_y + L * math.sin(angle_radians))
-    
-    # Disegna la linea inclinata
-    #cv2.line(image_with_line, (end_x_neg, end_y_neg), (end_x, end_y), (255, 255, 255), thickness=30)  # Linea bianca spessa
+
+    # Disegna la linea tra i due punti più bassi
     cv2.line(image_with_line, (start_x, start_y), (xPoint2, lowerY2), (255, 255, 255), thickness=30)
 
     return image_with_line
@@ -218,7 +204,7 @@ def color_enclosed_black_areas(image, color=(0, 255, 0), min_area=500, epsilon_f
                     center = (int(center[0]), int(center[1]))
                     #cv2.circle(colored_image, center, radius=10, color=(0, 255, 255), thickness=-1)
 
-    # Ritorna l'immagine, il booleano e il centro trovato
+                    # Ritorna l'immagine, il booleano e il centro trovato
                     center = (int(center[0]) - (width/2), int(center[1]))
     #se vanno specchiate le coordinate
     # center = (-int(center[0]), int(center[1]))
