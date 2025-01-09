@@ -151,6 +151,8 @@ def angle_calculation(image):
     max_angle_rad = np.deg2rad(max_angle)
     theta_sum = 0
     line_count = 0
+    if lines.size < 1:
+        return None
     for line in lines:
         rho, theta = line[0]
         if min_angle_rad <= theta <= max_angle_rad:
