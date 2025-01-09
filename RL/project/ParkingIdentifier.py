@@ -8,34 +8,11 @@ from typing import List, Tuple, Optional
 
 # Funzione per migliorare l'immagine (equalizzazione dell'istogramma)
 def preprocess_image(image):
-
-    #image = cv2.imread(imageURL)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Equalizzazione dell'istogramma per migliorare il contrasto
-    gray_image = cv2.equalizeHist(gray_image)
-
-    # Threshold automatico per estrarre il bianco
-    _, thresholded = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    
-    # Estrazione dei bianchi con soglia personalizzata
-    white_pixels = np.where(thresholded == 255)
-    sorted_pixels = np.sort(gray_image[white_pixels])
-    threshold_value = sorted_pixels[int(0.85 * len(sorted_pixels))]
-    _, custom_thresholded = cv2.threshold(gray_image, threshold_value, 255, cv2.THRESH_BINARY)
-
-    # Creazione della maschera per le aree bianche
-    mask = np.zeros_like(gray_image)
-    mask[custom_thresholded == 255] = 255  # Aree bianche
-    mask[custom_thresholded != 255] = 0   # Aree non bianche (nero)
-
-    # Operazioni morfologiche per migliorare l'immagine
+    _, binary_mask = cv2.threshold(gray_image, 200, 255, cv2.THRESH_BINARY)
     kernel = np.ones((5, 5), np.uint8)
-    image_closed = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    image_opened = cv2.morphologyEx(image_closed, cv2.MORPH_OPEN, (5,5))
-    image_opened[image_opened > 0] = 255
-
-    return image_opened
+    mask_cleaned = cv2.morphologyEx(binary_mask, cv2.MORPH_CLOSE, kernel)
+    return mask_cleaned
 
 def find_and_draw_longest_white_line(binary_image):
     """
@@ -137,16 +114,22 @@ def draw_line_at_angle_to_two_points(image, angle_radians):
     if abs(angle_radians) >= 0.5:
         lowerY -= 20
 
-    # Calcola i punti della linea inclinata
-    L = image.shape[1]
     start_x, start_y = xPoint, lowerY
-    end_x = int(start_x + L * math.cos(angle_radians))
-    end_y = int(start_y - L * math.sin(angle_radians))
-    end_x_neg = int(start_x - L * math.cos(angle_radians))
-    end_y_neg = int(start_y + L * math.sin(angle_radians))
+    dx = xPoint2 - start_x
+    dy = lowerY2 - start_y
+    angle_radians = math.atan2(dy, dx)
 
-    # Disegna la linea tra i due punti più bassi
-    cv2.line(image_with_line, (start_x, start_y), (xPoint2, lowerY2), (255, 255, 255), thickness=30)
+    # Lunghezza della prolunga
+    extension_length = 500  # Cambia questa lunghezza in base alle tue esigenze
+
+    # Calcola i nuovi estremi della retta prolungata
+    extended_start_x = int(start_x - extension_length * math.cos(angle_radians))
+    extended_start_y = int(start_y - extension_length * math.sin(angle_radians))
+    extended_end_x = int(xPoint2 + extension_length * math.cos(angle_radians))
+    extended_end_y = int(lowerY2 + extension_length * math.sin(angle_radians))
+
+    # Disegna la retta prolungata
+    cv2.line( image_with_line, (extended_start_x, extended_start_y), (extended_end_x, extended_end_y), (255, 255, 255), thickness=30)
 
     return image_with_line
 
