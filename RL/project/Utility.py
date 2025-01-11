@@ -10,14 +10,30 @@ def preprocess_image(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     adaptive_thresh = cv2.adaptiveThreshold(gray_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                            cv2.THRESH_BINARY, 11, 2)
-    kernel = np.ones((3, 11), np.uint8)
+    kernel = np.ones((3, 13), np.uint8)
     opened_mask = cv2.morphologyEx(adaptive_thresh, cv2.MORPH_OPEN, kernel)
     contours, _ = cv2.findContours(opened_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     final_mask = np.zeros_like(opened_mask)
     for contour in contours:
-        if cv2.contourArea(contour) >= 1000:
+        if cv2.contourArea(contour) >= 1500:
             cv2.drawContours(final_mask, [contour], -1, (255), thickness=cv2.FILLED)
     return final_mask
+
+def preprocess_image2(image):
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, binary_mask = cv2.threshold(gray_image, 200, 255, cv2.THRESH_BINARY)
+    kernel = np.ones((5, 5), np.uint8)
+    mask_cleaned = cv2.morphologyEx(binary_mask, cv2.MORPH_CLOSE, kernel)
+    return mask_cleaned
+
+def preprocess_image11(image):
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    lower_white = np.array([0, 0, 200])
+    upper_white = np.array([180, 50, 255])
+    binary_mask = cv2.inRange(hsv_image, lower_white, upper_white)
+    kernel = np.ones((5, 5), np.uint8)
+    mask_cleaned = cv2.morphologyEx(binary_mask, cv2.MORPH_CLOSE, kernel)
+    return mask_cleaned
 
 def spawn_vehicle(world, vehicle_index=0, pattern='vehicle.*'):
     blueprint_library = world.get_blueprint_library()
@@ -88,17 +104,24 @@ def find_point(img):
     colored_image = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     contours, _ = cv2.findContours(255 - img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     height, width = img.shape
+    areaM = 0
     for contour in contours:
         area = cv2.contourArea(contour)
         x, y, w, h = cv2.boundingRect(contour)
         if x > 0 and y > 0 and (x + w) < width and (y + h) < height:
             if area > 1500: 
                 print(area)
+                areaM = area
                 cv2.drawContours(colored_image, [contour], -1, (0,0,255), thickness=cv2.FILLED)
     mask = cv2.inRange(colored_image, np.array([0, 0, 255]), np.array([0, 0, 255]))
     mask = cv2.Canny(mask,100,200)
     midpoint, _, _ = find_highest_segment_midpoint_and_perpendicular(mask)
-    return midpoint
+    if areaM > 10000:
+        return midpoint
+    elif areaM < 3000:
+        return (400, midpoint[1])
+    else:
+        return midpoint
 
 def find_highest_segment_midpoint_and_perpendicular(mask):
     """
@@ -149,7 +172,8 @@ def find_highest_segment_midpoint_and_perpendicular(mask):
     return midpoint, perp_start, perp_end
 
 def angle_calculation(image):
-    edges = cv2.Canny(image, 50, 150)
+    imageP = preprocess_image(image)
+    edges = cv2.Canny(imageP, 50, 150)
     lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=100)
     min_angle = 75
     max_angle = 105
@@ -157,7 +181,7 @@ def angle_calculation(image):
     max_angle_rad = np.deg2rad(max_angle)
     theta_sum = 0
     line_count = 0
-    if lines.size < 1:
+    if lines.any():
         return None
     for line in lines:
         rho, theta = line[0]
