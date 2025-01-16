@@ -176,7 +176,6 @@ class World(object):
 
     def parking_asistent(self): #funzione del parkeggio
         setParking(self.player, self.world)
-        parking(self.player, self.world)
 
     def next_weather(self, reverse=False):
         self._weather_index += -1 if reverse else 1
@@ -270,6 +269,7 @@ class DualControl(object):
                     return True
                 elif event.key == K_z:      #parcheggio
                     world.parking_asistent()
+                    parking(self._control)
                 elif event.key == K_BACKSPACE:
                     world.restart()
                 elif event.key == K_F1:
