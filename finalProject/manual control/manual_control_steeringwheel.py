@@ -29,6 +29,7 @@ from __future__ import print_function
 import glob
 import os
 import sys
+from ParkingAsistent import parking, setParking
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -175,6 +176,7 @@ class World(object):
         self.hud.notification(actor_type)
 
     def parking_asistent(self): #funzione del parkeggio
+        setParking(self.player, self.world)
         parking(self.player, self.world)
 
     def next_weather(self, reverse=False):
