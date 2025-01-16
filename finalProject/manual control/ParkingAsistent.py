@@ -10,6 +10,7 @@ firstTime = True
 camera_retro = None
 camera_rigth = None
 radar = None
+vehicle = None
 
 min_ttc = float('inf')
 def radar_callback(data: carla.RadarMeasurement):
@@ -32,8 +33,9 @@ def camera_rigth_callback(image):
         print(center)
         run = False
 
-def setParking(vehicle, world):
-    global camera_retro, camera_rigth, radar
+def setParking(vehicleManual, world):
+    global camera_retro, camera_rigth, radar, vehicle
+    vehicle = vehicleManual
     radar_bp = world.get_blueprint_library().find('sensor.other.radar')
     radar_bp.set_attribute('horizontal_fov', '10')  # Horizontal field of view
     radar_bp.set_attribute('vertical_fov', '10')    # Vertical field of view
@@ -45,9 +47,9 @@ def setParking(vehicle, world):
     camera_rigth.listen(lambda image: camera_rigth_callback(image))
 
 
-def parking(vehicle, world):
+def parking(controlManual):
     target_speed_mps = 8 / 3.6
-    control = carla.VehicleControl()
+    control = controlManual
     control.steer = 0.0
     control.brake = 0.0
     target_distance = 3.2
