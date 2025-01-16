@@ -62,11 +62,12 @@ def parking(controlManual):
         current_velocity = vehicle.get_velocity()
         current_speed_mps = current_velocity.length()
         control = keep_lane(video_output, control, current_speed_mps, target_speed_mps)
-        vehicle.apply_control(vehicle, control)
+        print(control)
+        vehicle.apply_control(control)
         if min_ttc < ttc_threshold:
                 control = carla.VehicleControl()
                 control.brake = 1.0  
-                vehicle.apply_control(vehicle, control)
+                vehicle.apply_control(control)
                 print("Emergency braking activated!")
                 n_listem_break += 1
                 if n_listem_break>10:

@@ -269,7 +269,7 @@ class DualControl(object):
                     return True
                 elif event.key == K_z:      #parcheggio
                     world.parking_asistent()
-                    parking(self._control)
+                    parking(carla.VehicleControl())
                 elif event.key == K_BACKSPACE:
                     world.restart()
                 elif event.key == K_F1:
