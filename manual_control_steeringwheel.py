@@ -94,7 +94,6 @@ try:
     from pygame.locals import K_r
     from pygame.locals import K_s
     from pygame.locals import K_w
-
 except ImportError:
     raise RuntimeError('cannot import pygame, make sure pygame package is installed')
 

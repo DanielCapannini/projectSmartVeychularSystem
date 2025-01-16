@@ -95,7 +95,7 @@ try:
     from pygame.locals import K_r
     from pygame.locals import K_s
     from pygame.locals import K_w
-    from pygame.locals import K_Z
+    from pygame.locals import K_z
 
 except ImportError:
     raise RuntimeError('cannot import pygame, make sure pygame package is installed')
@@ -148,11 +148,8 @@ class World(object):
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
         cam_pos_index = self.camera_manager.transform_index if self.camera_manager is not None else 0
         # Get a random blueprint.
-        blueprint = random.choice(self.world.get_blueprint_library().filter(self._actor_filter))
-        blueprint.set_attribute('role_name', 'hero')
-        if blueprint.has_attribute('color'):
-            color = random.choice(blueprint.get_attribute('color').recommended_values)
-            blueprint.set_attribute('color', color)
+        blueprint = self.world.get_blueprint_library().filter('vehicle.*')[0]
+        
         # Spawn the player.
         if self.player is not None:
             spawn_point = self.player.get_transform()
@@ -160,10 +157,12 @@ class World(object):
             spawn_point.rotation.roll = 0.0
             spawn_point.rotation.pitch = 0.0
             self.destroy()
+            spawn_point = carla.Transform(carla.Location(-1, -25, 2), carla.Rotation(yaw=-90))
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         while self.player is None:
             spawn_points = self.world.get_map().get_spawn_points()
             spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
+            spawn_point = carla.Transform(carla.Location(-1, -25, 2), carla.Rotation(yaw=-90))
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.player, self.hud)
@@ -269,7 +268,7 @@ class DualControl(object):
             elif event.type == pygame.KEYUP:
                 if self._is_quit_shortcut(event.key):
                     return True
-                elif event.key == K_Z:      #parcheggio
+                elif event.key == K_z:      #parcheggio
                     world.parking_asistent()
                 elif event.key == K_BACKSPACE:
                     world.restart()
@@ -790,7 +789,8 @@ def game_loop(args):
 
     try:
         client = carla.Client(args.host, args.port)
-        client.set_timeout(2.0)
+        client.load_world('Town05')
+        client.set_timeout(20.0)
 
         #display = pygame.display.set_mode(
         #    (args.width, args.height),

@@ -79,7 +79,7 @@ def speed_control(control, target_speed_mps, current_speed_mps):
     return control
 
 def find_point(img):
-    img = preprocess_image(img)
+    img = preprocess_image2(img)
     output_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)  
     cv2.line(output_img, (0, 450), (800, 350), (255, 255, 255), thickness=8) 
     img = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
@@ -154,7 +154,7 @@ def find_highest_segment_midpoint_and_perpendicular(mask):
     return midpoint, perp_start, perp_end
 
 def angle_calculation(image):
-    imageP = preprocess_image2(image)
+    imageP = preprocess_image(image)
     edges = cv2.Canny(imageP, 50, 150)
     lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=100)
     min_angle = 75
