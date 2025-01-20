@@ -144,16 +144,14 @@ clock = None
 def radar_callback(data: carla.RadarMeasurement):
     global min_ttc
     min_ttc = float('inf')
-    min_depth_threshold = 0.2  # Soglia minima per la profondità
-    
-    for detection in data:
-        if detection.depth >= min_depth_threshold:  # Ignora rilevamenti troppo vicini
-            absolute_speed = abs(detection.velocity)
-            if absolute_speed != 0:
-                ttc = detection.depth / absolute_speed
-                print(f"TTC: {ttc}, Depth: {detection.depth}, Speed: {absolute_speed}")
-                if ttc < min_ttc:
-                    min_ttc = ttc
+    for detection, i in zip(data, range(len(data))):
+        absolute_speed = abs(detection.velocity)
+        # Calculate TTC
+        if absolute_speed != 0:
+            ttc = detection.depth / absolute_speed
+            print(ttc)
+            if ttc < min_ttc:
+                min_ttc = ttc
 
 def camera_rigth_callback(image):
     global run, video_output, center

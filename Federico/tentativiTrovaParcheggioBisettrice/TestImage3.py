@@ -36,9 +36,9 @@ def preprocess_image(imageURL):
 
     image = cv2.imread(imageURL)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    x_start, y_start = 0, 100  # Top-left corner
-    x_end, y_end = 1000, 900      # Bottom-right corner
-    gray_image = gray_image[y_start:y_end, x_start:x_end]
+    #x_start, y_start = 0, 100  # Top-left corner
+    #x_end, y_end = 1000, 900      # Bottom-right corner
+    #gray_image = gray_image[y_start:y_end, x_start:x_end]
 
     # Equalizzazione dell'istogramma per migliorare il contrasto
     gray_image = cv2.equalizeHist(gray_image)
@@ -619,6 +619,6 @@ imageURL2 = "./Federico/img/parcheggio3.jpg"
 ImageURLNew = "./RL/guida/output3/4365.png"
 ImageURLNew2 = "./RL/guida/output3/4736.png"
 
-#process_image(ImageURLNew)
-#process_image(ImageURLNew2)
-process_image(imageURL)
+process_image(ImageURLNew)
+process_image(ImageURLNew2)
+#process_image(imageURLAlto)
