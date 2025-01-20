@@ -63,11 +63,11 @@ def parking(controlManual):
         current_speed_mps = current_velocity.length()
         control = keep_lane(video_output, control, current_speed_mps, target_speed_mps)
         print(control)
-        vehicle.apply_control(control)
+        vehicle.apply_control()
         if min_ttc < ttc_threshold:
                 control = carla.VehicleControl()
                 control.brake = 1.0  
-                vehicle.apply_control(control)
+                vehicle.apply_control(carla.VehicleControl(steer=control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
                 print("Emergency braking activated!")
                 n_listem_break += 1
                 if n_listem_break>10:
@@ -83,10 +83,10 @@ def parking(controlManual):
         distance_travelled += current_speed_mps * (time.time() - pre_time)
         pre_time = time.time()
         control = keep_lane(video_output, control, current_speed_mps, target_speed_mps)
-        vehicle.apply_control(control)
+        vehicle.apply_control(carla.VehicleControl(steer = control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
     control.brake = 1.0
     control.throttle = 0.0
-    vehicle.apply_control(control)
+    vehicle.apply_control(carla.VehicleControl(steer = control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
     control.brake = 0.0
     control.reverse = True
     control.steer = 0.8
@@ -99,10 +99,10 @@ def parking(controlManual):
         distance_travelled += current_speed_mps * (time.time() - pre_time)
         pre_time = time.time()
         control = speed_control(control, target_speed_mps, current_speed_mps)
-        vehicle.apply_control(control)
+        vehicle.apply_control(carla.VehicleControl(steer = control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
     control.brake = 1.0
     control.throttle = 0.0
-    vehicle.apply_control(control)
+    vehicle.apply_control(carla.VehicleControl(steer = control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
     camera_rigth.destroy()
     image1 = None
     def camera_callback2(image):
@@ -115,6 +115,6 @@ def parking(controlManual):
             break
     control.brake = 1.0
     control.throttle = 0.0
-    vehicle.apply_control(control)
+    vehicle.apply_control(carla.VehicleControl(steer = control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
     time.sleep(1)
     camera_retro.destroy()

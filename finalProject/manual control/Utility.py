@@ -79,7 +79,7 @@ def speed_control(control, target_speed_mps, current_speed_mps):
     return control
 
 def find_point(img):
-    img = preprocess_image2(img)
+    img = preprocess_image(img)
     output_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)  
     cv2.line(output_img, (0, 450), (800, 350), (255, 255, 255), thickness=8) 
     img = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
