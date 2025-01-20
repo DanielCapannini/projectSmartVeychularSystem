@@ -154,7 +154,7 @@ def find_highest_segment_midpoint_and_perpendicular(mask):
     return midpoint, perp_start, perp_end
 
 def angle_calculation(image):
-    imageP = preprocess_image2(image)
+    imageP = preprocess_image(image)
     edges = cv2.Canny(imageP, 50, 150)
     lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=100)
     min_angle = 75
@@ -163,7 +163,7 @@ def angle_calculation(image):
     max_angle_rad = np.deg2rad(max_angle)
     theta_sum = 0
     line_count = 0
-    if lines.any():
+    if lines != None:
         return None
     for line in lines:
         rho, theta = line[0]
@@ -182,6 +182,7 @@ def angle_calculation(image):
 
 def keep_lane(image, control, current_speed_mps, target_speed_mps):
     angolo = angle_calculation(image)
+    print(angolo)
     control.steer = 0.0
     if angolo != None:
         valore_scalato = (((angolo - 75) / (105 - 75)) * 0.8) - 0.4

@@ -275,6 +275,7 @@ def parking(controlManual):
     vehicle.apply_control(carla.VehicleControl(steer = control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
     time.sleep(1)
     camera_retro.destroy()
+    radar.destroy()
     run= True
 
 
