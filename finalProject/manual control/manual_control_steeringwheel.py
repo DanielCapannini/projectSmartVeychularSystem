@@ -146,7 +146,6 @@ def radar_callback(data: carla.RadarMeasurement):
     min_ttc = float('inf')
     for detection, i in zip(data, range(len(data))):
         absolute_speed = abs(detection.velocity)
-        # Calculate TTC
         if absolute_speed != 0:
             ttc = detection.depth / absolute_speed
             print(ttc)
@@ -158,7 +157,6 @@ def camera_rigth_callback(image):
     video_output = np.reshape(np.copy(image.raw_data), (image.height, image.width, 4))
     prediction, c=process_image(np.reshape(np.copy(image.raw_data), (image.height, image.width, 4)))
     if prediction and run and c[0] > -100 and c[0] < 100:
-        cv2.imwrite("prova.png", np.reshape(np.copy(image.raw_data), (image.height, image.width, 4)))
         center = c
         print(center)
         run = False
@@ -322,11 +320,10 @@ class World(object):
             spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
             spawn_point = carla.Transform(carla.Location(-1, -25, 2), carla.Rotation(yaw=-90))
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
-            spawn_point = carla.Transform(carla.Location(-1, -40, 2))
+            spawn_point = carla.Transform(carla.Location(-29.2, -44, 2))
             blueprint_library1 = self.world.get_blueprint_library()
-            vehicle_bp1 = blueprint_library1.filter('vehicle.*')[0]
-            vehicleO = self.world.spawn_actor(vehicle_bp1, spawn_point)
-
+            vehicle_bp1 = blueprint_library1.filter('vehicle.*')[3]
+            vehicle0 = self.world.spawn_actor(vehicle_bp1, spawn_point)
             spawn_point = carla.Transform(carla.Location(4, -30, 2))
             blueprint_library1 = self.world.get_blueprint_library()
             vehicle_bp1 = blueprint_library1.filter('vehicle.*')[0]
