@@ -182,7 +182,7 @@ def setParking(vehicleManual, worldIm):
 
 
 def parking(controlManual):
-    global display
+    global display, run, min_ttc
     target_speed_mps = 8 / 3.6
     control = carla.VehicleControl()
     control.steer = 0.0
@@ -194,6 +194,7 @@ def parking(controlManual):
     collision = False
     time.sleep(1.5)
     while run:
+        print(min_ttc)
         world.tick(clock)
         world.render(display)
         pygame.display.flip()
@@ -218,6 +219,15 @@ def parking(controlManual):
     print(target_distance)
     pre_time = time.time()
     while distance_travelled < target_distance and not collision:
+        if min_ttc < ttc_threshold:
+                control = carla.VehicleControl()
+                control.brake = 1.0  
+                vehicle.apply_control(carla.VehicleControl(steer=control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
+                print("Emergency braking activated!")
+                n_listem_break += 1
+                if n_listem_break>10:
+                    collision = True
+                    break
         world.tick(clock)
         world.render(display)
         pygame.display.flip()
@@ -262,6 +272,7 @@ def parking(controlManual):
     vehicle.apply_control(carla.VehicleControl(steer = control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
     time.sleep(1)
     camera_retro.destroy()
+    run= True
 
 
 
@@ -307,6 +318,15 @@ class World(object):
             spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
             spawn_point = carla.Transform(carla.Location(-1, -25, 2), carla.Rotation(yaw=-90))
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
+            spawn_point = carla.Transform(carla.Location(-1, -40, 2))
+            blueprint_library1 = self.world.get_blueprint_library()
+            vehicle_bp1 = blueprint_library1.filter('vehicle.*')[0]
+            vehicleO = self.world.spawn_actor(vehicle_bp1, spawn_point)
+
+            spawn_point = carla.Transform(carla.Location(4, -30, 2))
+            blueprint_library1 = self.world.get_blueprint_library()
+            vehicle_bp1 = blueprint_library1.filter('vehicle.*')[0]
+            vehicle3 = self.world.spawn_actor(vehicle_bp1, spawn_point)
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.player, self.hud)
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
@@ -935,7 +955,6 @@ def game_loop(args):
         client = carla.Client(args.host, args.port)
         client.load_world('Town05')
         client.set_timeout(20.0)
-
         #display = pygame.display.set_mode(
         #    (args.width, args.height),
         #    pygame.HWSURFACE | pygame.DOUBLEBUF)

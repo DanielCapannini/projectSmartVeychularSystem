@@ -100,7 +100,7 @@ def find_point(img):
     midpoint, _, _ = find_highest_segment_midpoint_and_perpendicular(mask)
     if areaM > 10000:
         return midpoint
-    elif areaM < 5000:
+    elif areaM < 5000 and midpoint != None:
         return (400, midpoint[1])
     else:
         return midpoint
