@@ -163,7 +163,8 @@ def angle_calculation(image):
     max_angle_rad = np.deg2rad(max_angle)
     theta_sum = 0
     line_count = 0
-    if lines != None:
+    if lines.any:
+        print("dio")
         return None
     for line in lines:
         rho, theta = line[0]
@@ -178,6 +179,7 @@ def angle_calculation(image):
         if theta_mean_deg < 90:
             return theta_mean_deg-2
         return theta_mean_deg 
+    print("cane")
     return None
 
 def keep_lane(image, control, current_speed_mps, target_speed_mps):
