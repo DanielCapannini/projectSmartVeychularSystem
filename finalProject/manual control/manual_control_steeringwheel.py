@@ -141,14 +141,15 @@ world = None
 display = None
 clock = None
 
-min_ttc = float('inf')
 def radar_callback(data: carla.RadarMeasurement):
-    global min_ttc, min_distance
+    global min_ttc
     min_ttc = float('inf')
     for detection, i in zip(data, range(len(data))):
         absolute_speed = abs(detection.velocity)
+        # Calculate TTC
         if absolute_speed != 0:
             ttc = detection.depth / absolute_speed
+            print(ttc)
             if ttc < min_ttc:
                 min_ttc = ttc
 
@@ -179,6 +180,7 @@ def setParking(vehicleManual, worldIm):
     camera_retro.listen(lambda image: camera_callback2(image))
     camera_rigth = spawn_camera(attach_to=vehicle, world=worldIm, transform=carla.Transform(carla.Location(x=-0.8, y=0.6, z=1.9), carla.Rotation(yaw=90, pitch=-40)))
     camera_rigth.listen(lambda image: camera_rigth_callback(image))
+    radar.listen(radar_callback)
 
 
 def parking(controlManual):
@@ -215,7 +217,8 @@ def parking(controlManual):
                     collision = True
                     break
     time.sleep(0.05)
-    target_distance += -(center[0]/280)
+    if not collision:
+        target_distance += -(center[0]/280)
     print(target_distance)
     pre_time = time.time()
     while distance_travelled < target_distance and not collision:
