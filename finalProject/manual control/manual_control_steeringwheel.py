@@ -148,7 +148,6 @@ def radar_callback(data: carla.RadarMeasurement):
         absolute_speed = abs(detection.velocity)
         if absolute_speed != 0:
             ttc = detection.depth / absolute_speed
-            print(ttc)
             if ttc < min_ttc:
                 min_ttc = ttc
 
@@ -193,8 +192,8 @@ def parking(controlManual):
     ttc_threshold = 1.0
     collision = False
     time.sleep(1.5)
-    while run:
-        print(min_ttc)
+    i=0
+    while run and i<100:
         world.tick(clock)
         world.render(display)
         pygame.display.flip()
@@ -202,7 +201,6 @@ def parking(controlManual):
         current_speed_mps = current_velocity.length()
         control = carla.VehicleControl()
         control, _ = keep_lane(video_output, control, current_speed_mps, target_speed_mps)
-        print(control)
         control = carla.VehicleControl(steer=control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse)
         vehicle.apply_control(control)
         if min_ttc < ttc_threshold:
@@ -214,7 +212,8 @@ def parking(controlManual):
                 if n_listem_break>10:
                     collision = True
                     break
-    time.sleep(0.05)
+        i+=1
+        time.sleep(0.05)
     if not collision:
         target_distance += -(center[0]/280)
     print(target_distance)
