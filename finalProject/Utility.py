@@ -19,29 +19,6 @@ def preprocess_image(image):
             cv2.drawContours(final_mask, [contour], -1, (255), thickness=cv2.FILLED)
     return final_mask
 
-def preprocess_image2(image):
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, binary_mask = cv2.threshold(gray_image, 200, 255, cv2.THRESH_BINARY)
-    kernel = np.ones((5, 5), np.uint8)
-    mask_cleaned = cv2.morphologyEx(binary_mask, cv2.MORPH_CLOSE, kernel)
-    return mask_cleaned
-
-def preprocess_image11(image):
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_white = np.array([0, 0, 200])
-    upper_white = np.array([180, 50, 255])
-    binary_mask = cv2.inRange(hsv_image, lower_white, upper_white)
-    kernel = np.ones((5, 5), np.uint8)
-    mask_cleaned = cv2.morphologyEx(binary_mask, cv2.MORPH_CLOSE, kernel)
-    return mask_cleaned
-
-def spawn_vehicle(world, vehicle_index=0, pattern='vehicle.*'):
-    blueprint_library = world.get_blueprint_library()
-    vehicle_bp = blueprint_library.filter(pattern)[vehicle_index]
-    spawn_point = carla.Transform(carla.Location(-1, -30, 2), carla.Rotation(yaw=-90))
-    vehicle = world.spawn_actor(vehicle_bp, spawn_point)
-    return vehicle
-
 def spawn_camera(world, attach_to=None, transform=carla.Transform(carla.Location(x=1.2, z=1.2), carla.Rotation(pitch=-30)), width=800, height=600):
     camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
     camera_bp.set_attribute('image_size_x', str(width))
@@ -164,7 +141,7 @@ def angle_calculation(image):
     theta_sum = 0
     line_count = 0
     for line in lines:
-        rho, theta = line[0]
+        _, theta = line[0]
         if min_angle_rad <= theta <= max_angle_rad:
             theta_sum += theta
             line_count += 1
