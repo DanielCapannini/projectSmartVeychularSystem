@@ -956,7 +956,7 @@ def game_loop(args):
         client = carla.Client(args.host, args.port)
         client.load_world('Town05')
         client.set_timeout(20.0)
-        #display = pygame.display.set_mode(
+         #display = pygame.display.set_mode(
         #    (args.width, args.height),
         #    pygame.HWSURFACE | pygame.DOUBLEBUF)
         display = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
