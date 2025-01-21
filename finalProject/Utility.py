@@ -69,7 +69,6 @@ def find_point(img):
         x, y, w, h = cv2.boundingRect(contour)
         if x > 0 and y > 0 and (x + w) < width and (y + h) < height:
             if area > 1500: 
-                print(area)
                 areaM = area
                 cv2.drawContours(colored_image, [contour], -1, (0,0,255), thickness=cv2.FILLED)
     mask = cv2.inRange(colored_image, np.array([0, 0, 255]), np.array([0, 0, 255]))
@@ -77,7 +76,7 @@ def find_point(img):
     midpoint, _, _ = find_highest_segment_midpoint_and_perpendicular(mask)
     if areaM > 10000:
         return midpoint
-    elif areaM < 5000:
+    elif areaM < 5000 and not midpoint is None:
         return (400, midpoint[1])
     else:
         return midpoint
@@ -134,6 +133,8 @@ def angle_calculation(image):
     imageP = preprocess_image(image)
     edges = cv2.Canny(imageP, 50, 150)
     lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=100)
+    if lines is None:
+        return None
     min_angle = 75
     max_angle = 105
     min_angle_rad = np.deg2rad(min_angle)
@@ -157,9 +158,8 @@ def angle_calculation(image):
 
 def keep_lane(image, control, current_speed_mps, target_speed_mps):
     angolo = angle_calculation(image)
-    print(angolo)
     control.steer = 0.0
-    if angolo != None:
+    if not angolo is None:
         valore_scalato = (((angolo - 75) / (105 - 75)) * 0.8) - 0.4
         control.steer = valore_scalato
     control = speed_control(control, target_speed_mps, current_speed_mps)
