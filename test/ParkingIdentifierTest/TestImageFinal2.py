@@ -217,28 +217,28 @@ def process_image(imageURL, i=0):
 
     return parking_exist, center
 
-ImageURLNew = "./Test/ParkingIdentifierTest/ImagesToTest/312277.png"
-image = cv2.imread(ImageURLNew)
+ImageURLNew0 = "./Test/ParkingIdentifierTest/ImagesToTest/312250.png"
+image0 = cv2.imread(ImageURLNew0)
+ImageURLNew1 = "./Test/ParkingIdentifierTest/ImagesToTest/312277.png"
+image1 = cv2.imread(ImageURLNew1)
 ImageURLNew2 = "./Test/ParkingIdentifierTest/ImagesToTest/312304.png"
 image2 = cv2.imread(ImageURLNew2)
 ImageURLNew3 = "./Test/ParkingIdentifierTest/ImagesToTest/312332.png"
 image3 = cv2.imread(ImageURLNew3)
 ImageURLNew4 = "./Test/ParkingIdentifierTest/ImagesToTest/312358.png"
 image4 = cv2.imread(ImageURLNew4)
-imageURLNew5 = "./Test/ParkingIdentifierTest/ImagesToTest/312597.png"
+imageURLNew5 = "./Test/ParkingIdentifierTest/ImagesToTest/312381.png"
 image5 = cv2.imread(imageURLNew5)
-ImageURLNew6 = "./Test/ParkingIdentifierTest/ImagesToTest/312623.png"
+ImageURLNew6 = "./Test/ParkingIdentifierTest/ImagesToTest/312408.png"
 image6 = cv2.imread(ImageURLNew6)
-ImageURLNew7 = "./Test/ParkingIdentifierTest/ImagesToTest/312650.png"
+ImageURLNew7 = "./Test/ParkingIdentifierTest/ImagesToTest/312435.png"
 image7 = cv2.imread(ImageURLNew7)
-ImageURLNew8 = "./Test/ParkingIdentifierTest/ImagesToTest/312677.png"
+ImageURLNew8 = "./Test/ParkingIdentifierTest/ImagesToTest/312462.png"
 image8 = cv2.imread(ImageURLNew8)
-ImageURLNew9 = "./Test/ParkingIdentifierTest/ImagesToTest/312918.png"
+ImageURLNew9 = "./Test/ParkingIdentifierTest/ImagesToTest/312489.png"
 image9 = cv2.imread(ImageURLNew9)
-imageURLNew10 = "./Test/ParkingIdentifierTest/ImagesToTest/312944.png"
-image10 = cv2.imread(imageURLNew10)
 
-process_image(image)
+process_image(image0)
 process_image(image2)
 process_image(image3)
 process_image(image4)
@@ -247,4 +247,3 @@ process_image(image6)
 process_image(image7)
 process_image(image8)
 process_image(image9)
-process_image(image10)
