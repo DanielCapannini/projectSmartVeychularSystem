@@ -180,6 +180,7 @@ def setParking(vehicleManual, worldIm):
     radar.listen(radar_callback)
 
 
+
 def parking(controlManual):
     global display, run, min_ttc
     target_speed_mps = 8 / 3.6
@@ -193,6 +194,8 @@ def parking(controlManual):
     collision = False
     time.sleep(1.5)
     i=0
+
+    #ricerca parcheggio
     while run and i<100:
         world.tick(clock)
         world.render(display)
@@ -214,10 +217,14 @@ def parking(controlManual):
                     break
         i+=1
         time.sleep(0.05)
+
+
     if not collision:
         target_distance += -(center[0]/280)
     print(target_distance)
     pre_time = time.time()
+
+    #prima fase procedere dritto
     while distance_travelled < target_distance and not collision:
         if min_ttc < ttc_threshold:
                 control = carla.VehicleControl()
@@ -237,6 +244,8 @@ def parking(controlManual):
         pre_time = time.time()
         control, _ = keep_lane(video_output, control, current_speed_mps, target_speed_mps)
         vehicle.apply_control(carla.VehicleControl(steer = control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
+
+
     control.brake = 1.0
     control.throttle = 0.0
     vehicle.apply_control(carla.VehicleControl(steer = control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
@@ -246,6 +255,8 @@ def parking(controlManual):
     distance_travelled = 0.0
     target_distance = 3.9
     pre_time = time.time()
+
+    #prima fase retro
     while distance_travelled < target_distance and not collision:
         world.tick(clock)
         world.render(display)
@@ -261,6 +272,8 @@ def parking(controlManual):
     vehicle.apply_control(carla.VehicleControl(steer = control.steer, throttle=control.throttle, brake=control.brake, reverse=control.reverse))
     camera_rigth.destroy()
     time.sleep(0.15)
+
+    #seconda fase retro
     while True:
         world.tick(clock)
         world.render(display)

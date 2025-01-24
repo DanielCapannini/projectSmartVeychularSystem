@@ -60,9 +60,11 @@ def draw_line_at_angle_to_two_points(image, angle_radians):
     for contour in large_contours:
         for point in contour:
             x, y = point[0]
-            if y > lowerY or (y == lowerY and abs(x - xPoint) > min_distance):
-                lowerY2, xPoint2 = lowerY, xPoint
-                lowerY, xPoint = y, x
+            if y > lowerY:
+                if (y == lowerY and x > xPoint + min_distance or x < xPoint - min_distance):
+                    lowerY2, xPoint2 = lowerY, xPoint
+                lowerY = y
+                xPoint = x
             elif y > lowerY2 and abs(x - xPoint) > min_distance:
                 lowerY2, xPoint2 = y, x
     if lowerY == -1 or lowerY2 == -1:
